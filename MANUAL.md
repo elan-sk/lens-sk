@@ -89,7 +89,7 @@ Con el elemento seleccionado, la vista 🎨 Estilos muestra tipografía, tamaño
 
 ### 6.4 — Vista Layout: display, position y los overlays anidados
 
-La vista 📐 Layout muestra la estructura de posicionamiento (flex/grid, position) con overlays de color por profundidad, y tres switches (Display / Position / Delineado) para elegir qué mostrar cuando el componente es muy denso:
+La vista 📐 Layout muestra la estructura de posicionamiento (flex/grid, position) con overlays de color por profundidad, y tres switches (Display / Position / Delineado) para elegir qué mostrar cuando el componente es muy denso. Cada switch tiene su propio atajo (con la vista Layout abierta): **Y** Display, **N** Position, **O** Delineado — la regla de "al menos uno activo" (Display/Position se turnan solos; Delineado no se puede apagar si es el último) aplica igual por teclado que por clic.
 
 ![Vista Layout con los switches Display/Position/Delineado](assets/manual/04-vista-layout.png)
 
@@ -99,7 +99,7 @@ El botón `</>` abre un popup con el árbol DOM completo, resaltado como un edit
 
 ![Árbol HTML anidado, con clases Tailwind reales incluyendo basis-[30%]](assets/manual/05-arbol-html.png)
 
-Este ejemplo es representativo a propósito: la clase `!basis-[30%]` (una fracción de Tailwind con `/` implícito en la lógica de parseo de selectores) fue justamente el caso que expuso un bug real durante el desarrollo — ver la sección 8, "Historia de bugs reales", más abajo.
+Este ejemplo es representativo a propósito: la clase `!basis-[30%]` (una fracción de Tailwind con `/` implícito en la lógica de parseo de selectores) fue justamente el caso que expuso un bug real durante el desarrollo — ver la sección 9, "Historia de bugs reales", más abajo.
 
 ### 6.6 — Ocultar elementos con cascada visual
 
@@ -145,7 +145,36 @@ El botón ❓ Ayuda abre en cualquier momento un modal con la explicación compl
 
 ![Modal de Ayuda con la explicación de selección y de la pastilla](assets/manual/08-ayuda-modal.png)
 
-## 7. Ejemplos prácticos de uso
+## 7. Modo live: pedir cambios reales desde el navegador (🪄 / 📤)
+
+Todo lo descrito hasta acá es **vista previa**: vive en el DOM y en `localStorage`, nunca toca el disco. El modo live es la única puerta para que un cambio termine escrito en el archivo fuente real — y siempre a pedido explícito de un clic, nunca automático.
+
+Cuando hay un Claude Code escuchando, aparecen dos botones nuevos junto al resumen del elemento fijado:
+
+- **🪄 Pedir cambio** — texto libre describiendo qué querés (opcionalmente con una captura del elemento adjunta). Claude decide el valor y lo aplica como vista previa en vivo — mismo mecanismo que editar a mano con ✏️, así que queda editable después, no es definitivo todavía.
+- **📤 Aplicar a archivos reales** — toma lo que esté en vista previa en ese momento (haya llegado del 🪄, de ✏️ a mano, o de una mezcla de ambos) y le pide a Claude que lo escriba en el archivo fuente real del proyecto.
+
+Por dentro: un servidor local aparte del dev server del proyecto hace de puente — el navegador manda el pedido y se queda esperando la respuesta en el mismo `fetch()`, sin necesitar sockets ni un mecanismo de notificación aparte. Los botones **solo aparecen si hay alguien de verdad escuchando del otro lado** — si no, no se ve nada nuevo, ni siquiera un botón deshabilitado.
+
+**Reglas de seguridad:** los cambios de archivo real nunca tocan git (no hay commit ni push automático) y nunca salen del árbol de código del proyecto — quien usa la herramienta sigue siendo quien decide cuándo llevar eso a producción.
+
+**Requiere:** un proyecto con su propio dev server corriendo el helper (se levanta como una tarea más de `npm run dev`), y una sesión de Claude Code activa escuchando ese helper. Sin eso, la herramienta sigue funcionando exactamente igual que sin este modo — es una capa opcional encima, no una dependencia nueva.
+
+**Asistencia Claude hereda el overlay de la vista anterior:** activar 🤖 Asistencia Claude no es una vista con su propio overlay — muestra el mismo overlay de página que tenías activo justo antes (la grilla/etiquetas de 📐 Layout, o el margin/border/padding de 🎨 Estilos), y lo sigue actualizando en vivo mientras escribís el pedido: si scrolleás la página, el overlay se mueve con el elemento, exactamente como si esa vista siguiera abierta. Así podés seguir viendo la referencia visual (la grilla, el box-model) mientras le pedís el cambio a Claude, en vez de que se limpie la pantalla apenas abrís el panel de Asistencia. Si la última vista era Componente, Contraste o A11y (sin overlay propio), Asistencia tampoco muestra ninguno.
+
+### 7.1 — Dos vías, dos fuentes distintas para los colores del proyecto
+
+La herramienta se puede usar de dos formas — como módulo Node normal (sin IA) o junto a una sesión de Claude Code con modo-ia activo — y cada una resuelve los `--color-*` del proyecto desde un lugar distinto:
+
+| | Módulo Node normal (sin IA) | Skill con modo-ia (con IA) |
+|---|---|---|
+| Fuente de colores | `getProjectColorVariables()` — infiere los `--color-*` leyendo las reglas `:root`/`:host` del CSS **ya cargado en la página** (el `<link rel="stylesheet">` del theme compilado) | `colorTokens` en `project-map.json` — leído directo de la **fuente** (los plugins `tailwindcss/plugins/*.js` del proyecto, ej. `variables.js`), antes de compilar |
+| Cuándo se usa | Siempre, para el picker 🎨/dropdown de variables del panel Estilos | Solo cuando Claude necesita el hex real para responder un pedido live |
+| Requiere Node/servidor | No — funciona con la herramienta sola, inyectada en cualquier página | Sí (el helper del modo live + el generador del mapa del proyecto) |
+
+Matiz real: la vía sin IA lee el **compilado**, así que puede ir un paso atrás de la paleta si alguien editó el archivo fuente de variables y todavía no corrió el build — aceptable ahí, porque es lo único a lo que un script corriendo solo en el navegador tiene acceso. La vía con IA sí tiene que usar siempre la fuente, nunca el compilado, para no arrastrar ese mismo desfasaje.
+
+## 8. Ejemplos prácticos de uso
 
 **Ajustar el padding de una tarjeta hasta que se vea bien, y llevarlo al código:**
 1. Activar Inspección, hacer clic en la tarjeta.
@@ -169,7 +198,7 @@ El botón ❓ Ayuda abre en cualquier momento un modal con la explicación compl
 2. Clic en el ojito del bloque en cuestión — se oculta (`display:none`) junto con toda su cascada visual en el árbol.
 3. Clic de nuevo para restaurarlo, o `R` para deshacer todos los cambios de la página de una vez.
 
-## 8. Historia de bugs reales (por qué esto importa para confiar en la herramienta)
+## 9. Historia de bugs reales (por qué esto importa para confiar en la herramienta)
 
 Vale la pena documentar algunos de los bugs encontrados y corregidos durante el desarrollo, porque explican decisiones de diseño que de otra forma parecerían arbitrarias:
 
@@ -179,7 +208,7 @@ Vale la pena documentar algunos de los bugs encontrados y corregidos durante el 
 
 Estos tres bugs comparten un patrón: son el tipo de problema que solo aparece con datos reales de un proyecto en producción (clases de Tailwind reales, CSS real de scroll suave, estructuras HTML anidadas reales) — no con casos de prueba sintéticos. Esta primera versión fue validada directamente contra una página real en producción, no contra un sandbox artificial.
 
-## 9. Limitaciones honestas
+## 10. Limitaciones honestas
 
 - El chequeo de accesibilidad es un escaneo rápido, no reemplaza axe-core ni Lighthouse.
 - El diagrama box-model es esquemático (grosor fijo) — solo el número de texto es el valor real.
@@ -187,6 +216,24 @@ Estos tres bugs comparten un patrón: son el tipo de problema que solo aparece c
 - La traducción a "archivo/componente de origen" real (no solo por convención de nombre) solo funciona en React con build de desarrollo.
 - La persistencia depende de que el selector CSS interno siga resolviendo al mismo elemento — si la estructura HTML cambió entre recargas, el override simplemente no se aplica (no falla ruidosamente, pero tampoco avisa).
 
-## 10. Qué viene después
+## 11. Qué viene después: ideas para el futuro
 
 Esta primera versión vive como skill de Claude Code, pensada para inyectarse vía el MCP de Chrome DevTools en cualquier proyecto. El siguiente paso evaluado es reempaquetarla como paquete de npm (`lens-sk`), instalable como `devDependency` y auto-inyectada por un plugin de build (Vite/webpack) — siguiendo el modelo de distribución ya validado por herramientas como `react-scan` o `vite-plugin-vue-devtools`, pero apuntando a un hueco de mercado que ningún competidor cubre hoy: ser agnóstica de framework (funciona igual en WordPress/PHP renderizado, HTML estático, React o Vue) y tener edición visual de CSS con conciencia real de Tailwind — algo que ni las herramientas de "puente hacia IA" (stagewise) ni los editores visuales existentes (VisBug, CSS Scan) combinan hoy.
+
+Lo que sigue son notas de una exploración técnica sobre el modo live — **todavía no construido**, para retomar en una futura actualización.
+
+### Extensión de VSCode como alternativa (o complemento) al modo live
+
+Se evaluó si el puente navegador↔editor se podría hacer con una extensión de VSCode en vez de (o además de) una sesión de Claude Code escuchando el helper. Dos variantes posibles, sin decidir todavía cuál:
+
+1. **Con IA igual, pero embebida en la extensión** — llamando directo a la API de Claude con una key propia, sin necesitar una sesión de Claude Code abierta en la terminal.
+2. **Sin IA, supervisado por quien desarrolla** — la extensión arma un diff del cambio pedido y lo muestra para aceptar/rechazar con un clic (como una sugerencia de autocompletado), sin que ningún modelo decida nada — el criterio queda en manos de la persona.
+
+### El problema de fondo de la opción sin IA: clases que no llegan "tal cual" a la página
+
+Si el archivo fuente construye las clases por variables (PHP con condicionales, `clsx`/`classnames`, CSS Modules con hash, css-in-js), el string que se ve en el navegador no tiene correspondencia literal con ningún string fijo del código — es el *resultado* de una lógica, no una copia de ella. Ahí un tool determinístico solo puede:
+
+- **Resolverlo sin ambigüedad** cuando el framework expone su propia instrumentación de desarrollo (el `_debugSource` de React, el equivalente de Vue) — no depende de las clases en absoluto, pregunta directo "¿qué componente/línea renderizó esto?". Lens-SK ya usa esto parcialmente (ver "Consciente del proyecto", sección 2).
+- **Acotar candidatos, nunca dar una respuesta única**, cuando esa instrumentación no existe — buscando por texto los fragmentos literales que sí aparecen en el código, y dejando que alguien (persona o modelo) elija entre las coincidencias.
+
+Esto define qué tan lejos puede llegar una versión sin IA del modo live: gratis en React/Vue en modo desarrollo, pero "elegí vos entre estas opciones" en todo lo demás — no hay forma de evitar ese paso sin meter algo que entienda semántica.

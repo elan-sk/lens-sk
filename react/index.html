@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lens-SK React — banco de pruebas local</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; margin: 0; padding: 40px; background: #f3f1ee; color: #222;">
+    <!--
+      Esta página NO es parte del widget — es solo una página "host" de
+      mentira para probar la inyección localmente con `npm run dev`, tal
+      como se vería inyectado sobre un sitio real. El build de producción
+      (`npm run build`) no usa este archivo en absoluto (modo librería).
+    -->
+    <header style="max-width: 720px; margin: 0 auto 32px;">
+      <h1 style="font-size: 28px; margin: 0 0 8px;">Página de prueba</h1>
+      <p style="color: #555; line-height: 1.5;">Contenido de mentira para hacer clic y probar selección, box-model, tipografía, etc.</p>
+    </header>
+    <section class="impact-stats-demo" style="max-width: 720px; margin: 0 auto; padding: 24px; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+      <h2 style="margin: 0 0 16px;">Tarjeta de ejemplo</h2>
+      <div style="display: flex; gap: 16px;">
+        <div class="stat-card" style="flex: 1; padding: 16px; border: 1px solid #eee; text-align: center;">
+          <strong style="font-size: 24px; display: block;">+2.500</strong>
+          <span style="color: #666; font-size: 13px;">Productores acompañados</span>
+        </div>
+        <div class="stat-card" style="flex: 1; padding: 16px; border: 1px solid #eee; text-align: center;">
+          <strong style="font-size: 24px; display: block;">+20</strong>
+          <span style="color: #666; font-size: 13px;">Regiones en Colombia</span>
+        </div>
+      </div>
+      <button style="margin-top: 20px; padding: 10px 20px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+        Botón de ejemplo
+      </button>
+    </section>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

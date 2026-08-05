@@ -23,6 +23,31 @@
     return;
   }
 
+  // Base de assets/dev-tools/ (mismo cálculo que inject-inspector.js) — para
+  // cargar lazy las librerías de "Adjuntar documento" (pdf.js/mammoth/xlsx)
+  // solo cuando hacen falta, no en cada carga de página. Vendoreadas locales
+  // a propósito (no CDN): el usuario puede adjuntar documentos reales, y
+  // parsearlos con una librería servida por un tercero en tiempo de
+  // ejecución es una dependencia de red innecesaria para algo potencialmente
+  // sensible — mejor que vivan en el propio tema, como modern-screenshot.
+  var devToolsBase = (function () {
+    var s = document.querySelector('script[src*="/dev-tools/toolbar.js"]');
+    return s ? s.src.replace(/toolbar\.js(\?.*)?$/, '') : '';
+  })();
+  var vendorLoadPromises = {};
+  function loadVendorScript(filename) {
+    if (vendorLoadPromises[filename]) return vendorLoadPromises[filename];
+    vendorLoadPromises[filename] = new Promise(function (resolve, reject) {
+      if (!devToolsBase) { reject(new Error('no devToolsBase')); return; }
+      var s = document.createElement('script');
+      s.src = devToolsBase + filename;
+      s.onload = resolve;
+      s.onerror = function () { delete vendorLoadPromises[filename]; reject(new Error('No se pudo cargar ' + filename)); };
+      document.body.appendChild(s);
+    });
+    return vendorLoadPromises[filename];
+  }
+
   // Tailwind CSS v4 vía Play/browser CDN, para compilar clases "de stock"
   // que el proyecto todavía no tiene compiladas (ver stockClassToStyleDiff,
   // usado por el editor de clases del árbol HTML). Corre AISLADO dentro de
@@ -274,6 +299,83 @@
     issuesFoundSuffix: { es: ' problema(s) encontrado(s)', en: ' issue(s) found' },
     noIssues: { es: '✅ Sin problemas detectados.', en: '✅ No issues detected.' },
     showPositionedAncestor: { es: 'Click: resaltar su referencia (ancestro/contenedor)', en: 'Click: highlight its reference (ancestor/container)' },
+    liveCommitBtnTitle: { es: 'Aplicar vista previa a los archivos reales', en: 'Apply preview to the real files' },
+    liveRequestPlaceholder: { es: 'Describí qué querés cambiar en este elemento…', en: 'Describe what you want to change on this element…' },
+    liveRequestAttachScreenshot: { es: 'Editar captura de este elemento', en: "Edit this element's screenshot" },
+    liveRequestSend: { es: 'Enviar', en: 'Send' },
+    liveRequestCancel: { es: 'Cancelar', en: 'Cancel' },
+    liveRequestSending: { es: '🤖 Claude está procesando tu pedido…', en: '🤖 Claude is processing your request…' },
+    liveCommitSendingLabel: { es: 'Aplicando cambio', en: 'Applying change' },
+    liveCommitAllSendingLabel: { es: 'Aplicando cambios', en: 'Applying changes' },
+    toastLiveSuggestSending: { es: '🤖 Pensando tu pedido…', en: '🤖 Thinking about your request…' },
+    liveDoneLabel: { es: '✓ Listo', en: '✓ Done' },
+    liveNoteFallbackOk: { es: 'Listo, sin detalle adicional para aclarar.', en: 'Done, nothing else to add.' },
+    liveNoteFallbackFail: { es: 'Algo salió mal — sin más detalle disponible.', en: 'Something went wrong — no further detail available.' },
+    toastLiveApplying: { es: '📤 Aplicando cambio…', en: '📤 Applying change…' },
+    liveRequestErrorPrefix: { es: '❌ ', en: '❌ ' },
+    liveErrorLabel: { es: '❌ Error', en: '❌ Error' },
+    liveResultLabel: { es: '💬 Tu respuesta:', en: '💬 Your response:' },
+    liveCommitOkLabel: { es: '✅ Cambio aplicado', en: '✅ Change applied' },
+    liveCommitAllOkLabel: { es: '📤 Se aplicaron {n} cambios', en: '📤 {n} changes applied' },
+    liveCommitNoOverrides: { es: 'No hay cambios en vista previa para aplicar todavía.', en: "There's no preview changes to apply yet." },
+    toastClassesCopied: { es: '📋 Clases copiadas', en: '📋 Classes copied' },
+    toastComponentClassCopied: { es: '🏷️ Clase de componente copiada', en: '🏷️ Component class copied' },
+    toastCssCopied: { es: '📄 CSS copiado', en: '📄 CSS copied' },
+    toastCaptureCopied: { es: '📸 Captura copiada al portapapeles', en: '📸 Screenshot copied to clipboard' },
+    toastCaptureFailed: { es: '❌ No se pudo capturar', en: "❌ Couldn't capture screenshot" },
+    toastLiveScreenshotEdited: { es: '✏️ Captura editada lista para enviar', en: '✏️ Edited screenshot ready to send' },
+    liveEditCaptureTitle: { es: 'Editar captura antes de enviar (dibujar sobre la imagen)', en: 'Edit screenshot before sending (draw on the image)' },
+    liveAttachDocTitle: { es: 'Adjuntar documento (PDF, Word, Excel o imagen)', en: 'Attach a document (PDF, Word, Excel, or image)' },
+    liveAttachRemoveTitle: { es: 'Quitar este adjunto', en: 'Remove this attachment' },
+    liveAttachTruncatedTitle: { es: 'Se cortó por tamaño — no llega completo', en: "Cut off by size — won't arrive in full" },
+    toastLiveAttachAdded: { es: '📎 Adjunto agregado', en: '📎 Attachment added' },
+    toastLiveAttachFailed: { es: 'no se pudo procesar', en: 'could not be processed' },
+    imgEditorToolRectTitle: { es: 'Recuadro', en: 'Rectangle' },
+    imgEditorToolArrowTitle: { es: 'Flecha', en: 'Arrow' },
+    imgEditorToolPencilTitle: { es: 'Lápiz (trazo libre)', en: 'Pencil (freehand)' },
+    imgEditorToolTextTitle: { es: 'Texto', en: 'Text' },
+    imgEditorZoomInTitle: { es: 'Acercar', en: 'Zoom in' },
+    imgEditorZoomOutTitle: { es: 'Alejar', en: 'Zoom out' },
+    imgEditorUndoTitle: { es: 'Deshacer', en: 'Undo' },
+    imgEditorDownloadTitle: { es: 'Descargar imagen', en: 'Download image' },
+    imgEditorTextPrompt: { es: 'Texto a mostrar sobre la imagen:', en: 'Text to show on the image:' },
+    imgEditorConfirmUse: { es: 'Usar esta imagen', en: 'Use this image' },
+    imgEditorConfirmCopy: { es: 'Copiar imagen', en: 'Copy image' },
+    imgEditorEditBtn: { es: 'Editar', en: 'Edit' },
+    imgEditorDownloadBtn: { es: 'Descargar', en: 'Download' },
+    toastLiveSuggestApplied: { es: '✨ Sugerencia aplicada a la vista previa', en: '✨ Suggestion applied to the preview' },
+    toastLiveSuggestFailed: { es: '❌ Claude no pudo procesar el pedido', en: "❌ Claude couldn't process the request" },
+    toastLiveClassNoEffect: { es: '⚠️ La clase agregada no cambia ningún estilo (¿falta compilar el CSS?)', en: '⚠️ The added class has no visible effect (CSS not built yet?)' },
+    toastLiveApplied: { es: '📤 Cambios aplicados a los archivos reales', en: '📤 Changes applied to the real files' },
+    toastLiveApplyFailed: { es: '❌ No se pudo aplicar a los archivos', en: "❌ Couldn't apply to the files" },
+    toastLiveLocated: { es: '📍 Archivo localizado', en: '📍 File located' },
+    toastLiveLocateFailed: { es: '❌ No se pudo ubicar el archivo', en: "❌ Couldn't locate the file" },
+    liveHistoryTitle: { es: 'HISTORIAL', en: 'HISTORY' },
+    liveHistoryEmpty: { es: 'Todavía no hay pedidos.', en: 'No requests yet.' },
+    liveHistoryAppliedLabel: { es: '✓ Cambio aplicado', en: '✓ Change applied' },
+    liveHistoryAppliedAiLabel: { es: '🤖 ✓ Cambio aplicado', en: '🤖 ✓ Change applied' },
+    liveHistoryClearBtnLabel: { es: 'Borrar historial', en: 'Clear history' },
+    liveHistoryClearBtnTitle: { es: 'Borra el historial de pedidos de esta página (no afecta los archivos ya aplicados)', en: "Clears this page's request history (doesn't affect files already applied)" },
+    liveCommitAllBtnLabel: { es: 'Aplicar todos', en: 'Apply all' },
+    liveCommitAllBtnTitle: { es: 'Aplicar TODOS los cambios pendientes de la página (de Claude y manuales) a los archivos reales', en: 'Apply ALL pending changes on the page (Claude and manual) to the real files' },
+    liveCommitAllHistoryLabel: { es: 'Aplicar todos los cambios', en: 'Apply all changes' },
+    toastLiveCommitAllNone: { es: 'No hay cambios pendientes para aplicar.', en: 'No pending changes to apply.' },
+    toastLiveCommitAllSending: { es: '📤 Aplicando todos los cambios…', en: '📤 Applying all changes…' },
+    toastLiveCommitAllApplied: { es: '📤 Todos los cambios se aplicaron a los archivos reales', en: '📤 All changes were applied to the real files' },
+    toastLiveCommitAllFailed: { es: '❌ No se pudieron aplicar todos los cambios', en: "❌ Couldn't apply all the changes" },
+    liveGroupHeader: { es: 'Asistencia Claude', en: 'Claude assistance' },
+    liveCommitBtnLabel: { es: 'Aplicar', en: 'Apply' },
+    liveLocateBtnLabel: { es: 'Código', en: 'Code' },
+    liveLocateBtnTitle: { es: 'Ir al archivo y línea exactos en el editor', en: 'Jump to the exact file and line in the editor' },
+    liveLocateNotFound: { es: 'No se pudo ubicar el archivo/línea.', en: "Couldn't locate the file/line." },
+    liveHelpBtnLabel: { es: 'Ayuda', en: 'Help' },
+    liveHelpBtnTitle: { es: 'Ayuda específica de Asistencia Claude', en: 'Help specific to Claude assistance' },
+    liveHelpModalTitle: { es: 'Asistencia Claude — Ayuda', en: 'Claude assistance — Help' },
+    pillLiveBtnTitle: { es: 'Asistencia Claude (A)', en: 'Claude assistance (A)' },
+    liveQuestionAnswerPlaceholder: { es: 'Tu respuesta…', en: 'Your answer…' },
+    liveQuestionAnswerSend: { es: 'Responder', en: 'Answer' },
+    toastLiveQuestionSendFailed: { es: '❌ No se pudo mandar la respuesta.', en: "❌ Couldn't send the answer." },
+    askUserHeaderLabel: { es: 'Pregunta de Claude', en: 'Question from Claude' },
   };
   function tr(key) {
     var entry = STRINGS[key];
@@ -328,7 +430,7 @@
     '<li><b>Position</b> — el elemento fijado siempre se marca con su contorno de selección de siempre; además, cualquier elemento con <code>position</code> distinto de <code>static</code> se etiqueta como <b>relative</b>/<b>fixed</b>/<b>sticky</b> (arriba-izquierda) o <b>absolute</b> (arriba-derecha, para no solaparse con su ancestro posicionado) — cada tipo con su propio color. Clic en una etiqueta relative/fixed/sticky <b>selecciona</b> ese elemento; clic en <b>absolute</b> en cambio resalta (marco + etiqueta brillante, un instante) a su ancestro posicionado real, sin cambiar el elemento fijado — útil para entender rápido "¿respecto a qué se está posicionando esto?".</li>',
     '<li><b>Delineado</b> — el resto de los recuadros de contexto (todos los niveles anidados, tengan o no una etiqueta encima). Display y Position siempre dibujan el recuadro que necesitan para su propia etiqueta aunque Delineado esté apagado.</li>',
     '</ul>',
-    '<p>Al menos uno de los tres tiene que quedar activo: apagar Display o Position estando solo ellos activos enciende automáticamente al otro; Delineado, si es el único activo, no se puede apagar.</p>',
+    '<p>Al menos uno de los tres tiene que quedar activo: apagar Display o Position estando solo ellos activos enciende automáticamente al otro; Delineado, si es el único activo, no se puede apagar. Cada switch tiene su propio atajo (con la vista Layout abierta): <b>Y</b> Display, <b>N</b> Position, <b>O</b> Delineado.</p>',
 
     '<h3>&lt;/&gt; Ver estructura HTML</h3>',
     '<p>Abre un popup con el HTML del elemento seleccionado y sus hijos, resaltado por colores como en un editor de código. Cada fila con un elemento real (no texto) tiene dos íconos propios, siempre visibles (no dependen de pasar el mouse — funcionan igual con mouse que por toque en pantallas táctiles):</p>',
@@ -443,7 +545,7 @@
     '<li><b>Position</b> — the pinned element always gets its usual selection outline; on top of that, any element with a <code>position</code> other than <code>static</code> gets labeled <b>relative</b>/<b>fixed</b>/<b>sticky</b> (top-left) or <b>absolute</b> (top-right, so it never overlaps its positioned ancestor) — each type in its own color. Clicking a relative/fixed/sticky label <b>selects</b> that element; clicking <b>absolute</b> instead briefly highlights (box + glowing label) its real positioned ancestor, without changing the pinned element — handy for quickly answering "what is this positioned relative to?".</li>',
     '<li><b>Outline</b> — the rest of the context boxes (every other nested level, whether or not it has a label on it). Display and Position always draw whatever box their own label needs, even with Outline off.</li>',
     '</ul>',
-    '<p>At least one of the three has to stay on: turning off Display or Position while it\'s the only one left automatically turns the other one on; Outline, if it\'s the only one left, can\'t be turned off.</p>',
+    '<p>At least one of the three has to stay on: turning off Display or Position while it\'s the only one left automatically turns the other one on; Outline, if it\'s the only one left, can\'t be turned off. Each switch has its own shortcut (with the Layout view open): <b>Y</b> Display, <b>N</b> Position, <b>O</b> Outline.</p>',
 
     '<h3>&lt;/&gt; HTML structure</h3>',
     '<p>Opens a popup with the HTML of the selected element and its children, syntax-highlighted like a code editor. Every row for a real element (not text) has two icons of its own, always visible (they don\'t depend on hovering — they work the same with a mouse or by tapping on touch screens):</p>',
@@ -514,6 +616,79 @@
   ].join('');
 
   function getHelpContentHTML() { return currentLang === 'es' ? HELP_CONTENT_HTML_ES : HELP_CONTENT_HTML_EN; }
+
+  // Ayuda específica de Asistencia Claude (ver renderLive) — completada a
+  // partir de la orden explícita de actualizar/sincronizar documentación
+  // (v1.2.7). Mismo formato/tono que HELP_CONTENT_HTML_ES/EN de arriba.
+  var LIVE_HELP_CONTENT_HTML_ES = [
+    '<h2>🤖 Asistencia Claude (modo live)</h2>',
+    '<p>Puente en vivo con una sesión de Claude Code que esté escuchando este proyecto: pedile cambios en texto libre y, cuando convenzan, mandalos directo al archivo fuente real — sin salir del navegador.</p>',
+
+    '<h3>🪄 Pedir cambio</h3>',
+    '<p>Describí en texto libre qué querés cambiar del elemento fijado. Claude decide el valor y lo aplica como <b>vista previa</b> — mismo sistema que editar a mano con ✏️, así que después se puede seguir ajustando o deshacer, no es definitivo todavía.</p>',
+    '<p>La captura del elemento va <b>siempre</b> adjunta al pedido (es lo que le permite a Claude ver de verdad lo que está pasando en la página, no solo leer clases). El botón ✏️ junto a "Editar captura de este elemento" abre un editor simple (recuadros, flechas, texto) para señalar algo puntual antes de mandarla.</p>',
+    '<p>Abrir Asistencia no borra el overlay de la vista que tenías antes: si venías de 📐 Layout o 🎨 Estilos, esa grilla/esos márgenes siguen mostrándose (y siguiendo al elemento si scrolleás) mientras escribís el pedido — es tu referencia visual, no desaparece por abrir el panel.</p>',
+
+    '<h3>📤 Aplicar / Aplicar todos</h3>',
+    '<p><b>📤 Aplicar</b> toma lo que esté en vista previa en ese momento (haya llegado del 🪄, de ✏️ a mano, o de una mezcla de ambos) y le pide a Claude que lo escriba en el archivo fuente real del elemento fijado. <b>Aplicar todos</b> (en HISTORIAL) hace lo mismo con <b>todos</b> los cambios pendientes de la página de una sola vez, elemento por elemento, sin tener que ir fijando uno por uno.</p>',
+    '<p>Los cambios de archivo real nunca tocan git (no hay commit ni push automático) — vos seguís decidiendo cuándo eso se sube a algún lado.</p>',
+
+    '<h3>📍 Código</h3>',
+    '<p>Salta directo al archivo y línea exactos del elemento fijado en tu editor. Si Claude no puede resolverlo solo (ej. una clase armada 100% dinámica), pide ayuda mostrando lo que sepa del elemento.</p>',
+
+    '<h3>📎 Adjuntar documentos</h3>',
+    '<p>El botón 📎 (o arrastrar y soltar sobre el textarea, o pegar con Ctrl+V) suma PDF, Word, Excel o una imagen al pedido. <b>Nunca se manda el archivo original</b>: cada uno se procesa del lado del navegador a texto plano/Markdown (PDF por página, Word como texto, Excel como tabla) o, si es una imagen, a un JPEG comprimido — para que Claude reciba la información limpia y sin gastar de más en tokens.</p>',
+
+    '<h3>Autocompletado <code>/</code> y <code>@</code></h3>',
+    '<p>Escribiendo <b>/</b> en el textarea aparece un menú con skills/comandos relevantes del proyecto (con descripción de cada uno); escribiendo <b>@</b> aparece un buscador de archivos reales del theme. En los dos casos, <b>↑/↓</b> navegan las opciones y <b>Tab</b>/<b>Enter</b> insertan la resaltada en el lugar del cursor, sin tocar el resto de lo ya escrito.</p>',
+
+    '<h3>Preguntas de Claude</h3>',
+    '<p>Si Claude necesita algo más para resolver el pedido, la pregunta aparece <b>en este mismo panel</b> (nunca en su chat de VSCode): un cuadro propio debajo del estado, con un campo para responder. También puede llegar una pregunta con <b>opciones</b> para elegir (más una opción de respuesta libre) en un modal aparte, incluso sin que haya ningún pedido en curso — Claude la puede abrir en cualquier momento que necesite que decidas algo.</p>',
+
+    '<h3>Cancelar</h3>',
+    '<p>Corta el pedido en curso al instante — Claude se entera al toque y no sigue trabajando en algo que ya se descartó.</p>',
+
+    '<h3>Historial</h3>',
+    '<p>Registro de cada pedido de esta página (qué se pidió, link al archivo, si se aplicó) — una bitácora, no un lugar para leer explicaciones largas (esas van en "Tu respuesta", debajo del estado de cada pedido).</p>',
+
+    '<h3>Requiere</h3>',
+    '<p>Un proyecto con su propio dev server corriendo el helper del modo live, y una sesión de Claude Code activa escuchando ese helper. Sin eso, 🪄/📤/📍 simplemente no aparecen — el resto de la herramienta sigue funcionando exactamente igual.</p>',
+  ].join('');
+  var LIVE_HELP_CONTENT_HTML_EN = [
+    '<h2>🤖 Claude assistance (live mode)</h2>',
+    '<p>Live bridge to a Claude Code session listening to this project: ask it for changes in free text and, once you like the result, send it straight to the real source file — without leaving the browser.</p>',
+
+    '<h3>🪄 Request change</h3>',
+    '<p>Describe in free text what you want changed on the pinned element. Claude decides the value and applies it as a <b>preview</b> — same mechanism as editing by hand with ✏️, so it stays editable afterward, it\'s not final yet.</p>',
+    '<p>The element\'s screenshot is <b>always</b> attached to the request (it\'s what lets Claude actually see what\'s happening on the page, not just read classes). The ✏️ button next to "Edit this element\'s screenshot" opens a simple editor (boxes, arrows, text) to point something out before sending it.</p>',
+    '<p>Opening Assistance doesn\'t clear the overlay from whatever view you were in before: if you came from 📐 Layout or 🎨 Styles, that grid/those margins keep showing (and keep following the element if you scroll) while you type the request — it\'s your visual reference, it doesn\'t disappear just because the panel opened.</p>',
+
+    '<h3>📤 Apply / Apply all</h3>',
+    '<p><b>📤 Apply</b> takes whatever is currently in preview (from 🪄, from a manual ✏️ edit, or a mix of both) and asks Claude to write it into the pinned element\'s real source file. <b>Apply all</b> (in HISTORY) does the same for <b>every</b> pending change on the page at once, element by element, without having to pin each one.</p>',
+    '<p>Real file changes never touch git (no automatic commit or push) — you still decide when that gets shipped anywhere.</p>',
+
+    '<h3>📍 Code</h3>',
+    '<p>Jumps straight to the pinned element\'s exact file and line in your editor. If Claude can\'t resolve it on its own (e.g. a fully dynamic class), it asks for help showing what it knows about the element.</p>',
+
+    '<h3>📎 Attach documents</h3>',
+    '<p>The 📎 button (or drag-and-drop onto the textarea, or Ctrl+V paste) adds a PDF, Word, Excel file or an image to the request. <b>The original file is never sent</b>: each one is processed on the browser side into plain text/Markdown (PDF per page, Word as text, Excel as a table) or, for an image, into a compressed JPEG — so Claude gets clean information without wasting extra tokens.</p>',
+
+    '<h3><code>/</code> and <code>@</code> autocomplete</h3>',
+    '<p>Typing <b>/</b> in the textarea opens a menu of relevant project skills/commands (with a description for each); typing <b>@</b> opens a search over real project files. In both cases, <b>↑/↓</b> navigate the options and <b>Tab</b>/<b>Enter</b> insert the highlighted one right where the cursor is, without touching the rest of what\'s already written.</p>',
+
+    '<h3>Questions from Claude</h3>',
+    '<p>If Claude needs something else to resolve the request, the question shows up <b>right in this panel</b> (never in its VSCode chat): its own box under the status line, with a field to answer. A question can also arrive with <b>options</b> to pick from (plus a free-text option) in a separate modal, even with no request in progress — Claude can open it any time it needs you to decide something.</p>',
+
+    '<h3>Cancel</h3>',
+    '<p>Stops the request in progress immediately — Claude finds out right away and doesn\'t keep working on something already discarded.</p>',
+
+    '<h3>History</h3>',
+    '<p>A log of every request on this page (what was asked, a link to the file, whether it was applied) — a record, not a place for long explanations (those go in "Your answer", under each request\'s status).</p>',
+
+    '<h3>Requires</h3>',
+    '<p>A project with its own dev server running the live-mode helper, and an active Claude Code session listening to that helper. Without that, 🪄/📤/📍 simply don\'t show up — the rest of the tool keeps working exactly the same.</p>',
+  ].join('');
+  function getLiveHelpContentHTML() { return currentLang === 'es' ? LIVE_HELP_CONTENT_HTML_ES : LIVE_HELP_CONTENT_HTML_EN; }
 
   // Créditos: datos reales de ELAN-SK/Elan SK Soft, mismo patrón de formato
   // ya validado en otro proyecto (filas centradas como conjunto, etiqueta
@@ -609,8 +784,11 @@
     // estiraba y envolvía. El orden visual de cada hijo se controla con la
     // propiedad `order` (ver JS más abajo, junto a cada pill.appendChild) —
     // así no hace falta reordenar dónde se arma cada botón en el código.
+    // Sin :hover propio a propósito (pedido explícito): el contenedor no
+    // hace nada por sí mismo al pasar el mouse (el toggle real está en
+    // pill-label), así que un cambio de fondo ahí no comunica nada — el
+    // hover queda solo en los botones/íconos, que sí hacen algo al clic.
     '.pill{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;background:#111827;color:#fff;padding:10px 5px;border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;font-size:15px;user-select:none;max-height:calc(100vh - 32px);margin-right:6px;}',
-    '.pill:hover{background:#1f2937;}',
     // Indicador simple de "hay vista previa de estilos activa en algún lado
     // de esta página": la píldora entera se tiñe de ámbar (mismo color que
     // el aviso/borde de fila overridden), visible incluso minimizada.
@@ -626,25 +804,138 @@
     '.pill-reset-all span{display:block;line-height:1;}',
     '.pill-reset-all .reset-icon{font-size:14px;}',
     '.pill-reset-all .reset-count{font-size:11px;}',
+    // "Modo live": puente navegador↔Claude (ver lens-sk-live-server.js). Vive
+    // como contenido del panel (vista "live", ver renderLive) — ya no es un
+    // grupo aparte con su propio borde/oculto-visible, así que no le hace
+    // falta un contenedor propio: solo la fila de 3 botones y, si "Sugerir"
+    // está abierto, el formulario de pedido debajo.
+    '.live-actions{display:flex;gap:6px;}',
+    '.live-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;padding:6px 4px;font-size:9px;line-height:1.15;cursor:pointer;white-space:nowrap;font-family:inherit;flex:1;}',
+    '.live-btn .live-btn-ic{font-size:14px;line-height:1;}',
+    '.live-btn:hover{background:#374151;}',
+    '.live-btn:disabled{opacity:.4;cursor:not-allowed;}',
+    '.live-btn:disabled:hover{background:#1f2937;}',
+    '.live-compose{margin-top:10px;padding-top:10px;border-top:1px solid #1f2937;position:relative;}',
+    '.live-compose.live-compose-dragover{outline:2px dashed #ec4899;outline-offset:-4px;border-radius:8px;background:rgba(236,72,153,.06);}',
+    '.live-compose textarea{width:100%;min-height:110px;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;}',
+    '.live-compose textarea:focus{outline:1px solid #ec4899;}',
+    '.live-compose .live-status{font-size:12px;color:#fbbf24;margin-top:8px;min-height:16px;white-space:pre-line;}',
+    // Última respuesta final (ver liveLastResultBox/renderLastLiveResult):
+    // caja aparte, no la línea de estado — para que se note que es algo
+    // distinto ("esto ya terminó") y se pueda leer con calma.
+    '.live-compose .live-last-result{margin-top:8px;font-size:12.5px;color:#9ca3af;font-style:italic;line-height:1.4;word-break:break-word;white-space:pre-line;}',
+    // Pregunta de Claude a mitad de un pedido (protocolo /ask ↔ /answer,
+    // ver startLiveProgressPoll) — visualmente distinta de liveStatus/
+    // liveLastResultBox: fondo propio + borde para que se note que hace
+    // falta ACCIÓN del usuario (responder), no solo lectura.
+    '.live-compose .live-question{display:none;margin-top:8px;background:rgba(236,72,153,.08);border:1px solid #ec4899;border-radius:8px;padding:8px;}',
+    '.live-compose .live-question .live-question-text{font-size:12.5px;color:#e5e7eb;line-height:1.4;margin-bottom:6px;white-space:pre-line;}',
+    '.live-compose .live-question .live-question-row{display:flex;gap:6px;}',
+    '.live-compose .live-question input{flex:1;min-width:0;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:6px 8px;font-size:12.5px;font-family:inherit;}',
+    '.live-compose .live-question input:focus{outline:1px solid #ec4899;}',
+    '.live-compose .live-question button{flex-shrink:0;background:#ec4899;border:1px solid #db2777;color:#fff;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}',
+    '.live-compose .live-question button:hover{background:#db2777;}',
+    '.live-edit-capture-btn{background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:6px;width:28px;height:28px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}',
+    '.live-edit-capture-btn:hover:not(:disabled){background:#374151;}',
+    '.live-edit-capture-btn:disabled{opacity:.4;cursor:not-allowed;}',
+    '.live-attachments-list{display:none;flex-wrap:wrap;gap:6px;margin-top:8px;}',
+    '.live-attachment-chip{display:flex;align-items:center;gap:6px;background:#0b1220;border:1px solid #1f2937;border-radius:999px;padding:4px 6px 4px 10px;font-size:11.5px;color:#e5e7eb;max-width:100%;}',
+    '.live-attachment-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;}',
+    '.live-attachment-chip button{background:#1f2937;border:1px solid #374151;color:#9ca3af;border-radius:999px;width:16px;height:16px;font-size:9px;line-height:1;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}',
+    '.live-attachment-chip button:hover{background:#374151;color:#e5e7eb;}',
+    '.live-compose .live-actions-row{display:flex;justify-content:center;gap:8px;margin-top:10px;}',
+    // Acá Cancelar/Enviar son solo texto (no ícono+label como el resto de
+    // .live-btn) — letra más grande que el 9px base, y Enviar resaltado como
+    // acción positiva/principal; Cancelar se queda con el gris neutro de
+    // .live-btn de siempre.
+    '.live-compose .live-actions-row .live-btn{flex:0 0 auto;flex-direction:row;font-size:13px;padding:7px 16px;}',
+    '.live-btn-send{background:#16a34a;border-color:#15803d;color:#fff;font-weight:600;}',
+    '.live-btn-send:hover{background:#15803d;}',
+    // Historial de Asistencia Claude (ver getLiveHistory/renderLiveHistory) —
+    // mismo espíritu visual que .live-compose (separador arriba), lista con
+    // scroll propio para no estirar el panel sin límite si se acumulan
+    // muchos pedidos.
+    '.live-history{margin-top:10px;padding-top:10px;border-top:1px solid #1f2937;}',
+    '.live-history-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}',
+    '.live-history-header>span{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;font-weight:700;}',
+    '.live-history-header .live-btn{flex:0 0 auto;flex-direction:row;font-size:12px;padding:5px 10px;}',
+    '.live-history-list{display:flex;flex-direction:column;gap:6px;}',
+    '.live-history-item{background:#0b1220;border:1px solid #1f2937;border-left:2px solid #374151;border-radius:6px;padding:6px 8px;cursor:pointer;}',
+    '.live-history-item:hover{background:#111827;}',
+    '.live-history-item-error{border-left-color:#ef4444;}',
+    // Mismo verde que .live-btn-send (#16a34a) — "esto ya quedó escrito en
+    // el archivo real", a diferencia del gris neutro por defecto (sugerencia
+    // todavía solo en vista previa) o el rojo de error.
+    '.live-history-item-applied{border-left-color:#16a34a;background:rgba(22,163,74,.08);}',
+    '.live-history-applied-tag{margin-top:4px;font-size:11px;font-weight:700;color:#16a34a;}',
+    '.live-history-item-head{font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:2px;}',
+    '.live-history-prompt{font-size:12px;color:#9ca3af;word-break:break-word;}',
+    '.live-history-file-link{color:#93c5fd;font-family:ui-monospace,monospace;font-size:12px;padding:3px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+    '.live-history-file-link:hover{text-decoration:underline;}',
+    '.live-history-clear-btn{display:none;margin-top:8px;width:100%;background:transparent;border:1px solid #374151;border-radius:6px;color:#9ca3af;padding:6px 10px;font-size:11px;cursor:pointer;font-family:inherit;}',
+    '.live-history-clear-btn:hover{background:#1f2937;color:#e5e7eb;}',
     '.bar{display:none;flex-direction:column;gap:7px;background:#111827;color:#fff;padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.4);width:min(340px, calc(100vw - 32px));max-height:75vh;overflow:auto;scrollbar-width:thin;scrollbar-color:#374151 transparent;margin-right:5px;}',
     '.bar.open{display:flex;}',
     '.bar::-webkit-scrollbar,.panel::-webkit-scrollbar,.color-var-dropdown::-webkit-scrollbar{width:6px;}',
     '.bar::-webkit-scrollbar-track,.panel::-webkit-scrollbar-track,.color-var-dropdown::-webkit-scrollbar-track{background:transparent;}',
     '.bar::-webkit-scrollbar-thumb,.panel::-webkit-scrollbar-thumb,.color-var-dropdown::-webkit-scrollbar-thumb{background:#374151;border-radius:999px;}',
     '.bar::-webkit-scrollbar-thumb:hover,.panel::-webkit-scrollbar-thumb:hover,.color-var-dropdown::-webkit-scrollbar-thumb:hover{background:#4b5563;}',
-    '.pinned{font-size:13px;color:#93c5fd;background:#0b1220;border:1px solid #1f2937;border-radius:6px;padding:6px 8px;word-break:break-word;padding-right:40px;}',
+    '.pinned{font-size:13px;color:#93c5fd;background:#0b1220;border:1px solid #1f2937;border-radius:6px;padding:6px 8px;word-break:break-word;padding-right:40px;cursor:pointer;}',
+    '.pinned:hover{background:#111827;}',
     '.row{display:flex;flex-wrap:wrap;gap:6px;}',
     'button.tool{flex:1 1 auto;min-width:70px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;padding:9px 7px;font-size:13px;cursor:pointer;text-align:center;line-height:1.3;white-space:nowrap;}',
     'button.tool:hover{background:#374151;}',
     'button.tool.active{background:#2563eb;border-color:#2563eb;color:#fff;}',
     'button.tool:disabled{opacity:.4;cursor:not-allowed;}',
     'button.tool-icon{flex:0 0 auto;width:38px;height:34px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}',
+    'button.tool-icon:disabled{opacity:.4;cursor:not-allowed;}',
     'button.tool-icon:hover{background:#374151;}',
     'button.tool-icon.active{background:#ec4899;border-color:#ec4899;color:#fff;}',
+    // Misma forma/tamaño que el resto de íconos de la pastilla, pero con
+    // otra paleta (violeta) — acceso directo a "Asistencia Claude" (copia
+    // del botón ✨ Sugerir del grupo, mismo destino, mismo ícono).
+    'button.tool-icon.tool-icon-live{background:#4c1d95;border-color:#6d28d9;}',
+    'button.tool-icon.tool-icon-live:hover{background:#5b21b6;}',
+    // Estado activo (vista "live" abierta): mismo criterio de 3 clases que
+    // .tool-icon.active para poder ganarle en especificidad a la regla de
+    // arriba (ambas son de 2 clases — sin esto, .tool-icon-live siempre
+    // "ganaba" y el ícono se veía IGUAL prendido o apagado). Se queda en la
+    // familia violeta (no pasa a rosa como el resto) — solo más claro/con
+    // halo, para no perder la identidad propia de este ícono.
+    'button.tool-icon.tool-icon-live.active{background:#7c3aed;border-color:#c4b5fd;box-shadow:0 0 0 2px rgba(196,181,253,.4);}',
+    // Contador de cambios hechos por Claude (ver countClaudeOverrides) y de
+    // TODOS los cambios pendientes (pillCommitAllBadge) — arriba a la
+    // izquierda: abajo a la derecha chocaba visualmente con el badge de
+    // atajo (arriba a la derecha, .hotkey-badge) del ícono siguiente en la
+    // grilla de la píldora (fila de abajo, misma columna). A diferencia de
+    // ese, este NO depende de Shift — siempre visible mientras haya al
+    // menos 1 cambio pendiente.
+    '.pill-live-badge{position:absolute;top:-4px;left:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#8b5cf6;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;box-shadow:0 0 0 2px #111827;pointer-events:none;}',
+    // Contador de "Aplicar todos" (pillCommitAllBadge): mismo tamaño/posición
+    // que .pill-live-badge, pero en verde — para distinguirlo a simple vista
+    // del morado de "cambios de Claude" (mismo criterio de color que
+    // .has-pending-commit, no es un verde nuevo inventado).
+    '.pill-live-badge-green{background:#22c55e;}',
+    // pillCopyComponentBtn repurposado como "Aplicar todos" (ver
+    // updateOverrideIndicator): se pone en verde mientras haya algo
+    // pendiente para guardar, para que se note de un vistazo sin tener que
+    // mirar el número del badge.
+    'button.tool-icon.has-pending-commit{background:#166534;border-color:#22c55e;}',
+    'button.tool-icon.has-pending-commit:hover{background:#15803d;}',
     // Mantener Shift apretado (con la barra visible) revela la letra de cada
     // atajo encima de su ícono — oculto por default, .show-hotkeys lo prende.
     '.hotkey-badge{position:absolute;top:-6px;right:-6px;background:#000;color:#fbbf24;font-size:9px;font-weight:800;padding:0 4px;height:14px;line-height:14px;border-radius:4px;box-shadow:0 0 0 1px #374151;display:none;pointer-events:none;}',
     '.show-hotkeys .hotkey-badge{display:block;}',
+    // Los de Aplicar/Código/Ayuda (adentro del panel de Asistencia Claude,
+    // ver renderLive) van SIEMPRE visibles, no atados al Shift de la pastilla
+    // — el panel no es descendiente de `pill` así que `.show-hotkeys` nunca
+    // los alcanzaría de otra forma, y acá interesa que se vean directo.
+    '.live-actions .hotkey-badge{display:block;}',
+    // Mismo criterio que .live-actions de arriba: los switches de Layout
+    // (Display/Position/Delineado) tampoco son descendientes de `pill`, así
+    // que su badge de atajo va siempre visible, no atado al Shift/Inspección
+    // de la pastilla.
+    '.layout-view-row .hotkey-badge{display:block;}',
     '.panel{background:#0b1220;border:1px solid #1f2937;border-radius:8px;padding:9px;font-size:13px;color:#e5e7eb;min-height:333px;max-height:min(640px, 65vh);overflow:auto;scrollbar-width:thin;scrollbar-color:#374151 transparent;}',
     '.panel h4{margin:7px 0 5px;font-size:12px;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;}',
     '.panel h4:first-child{margin-top:0;}',
@@ -676,6 +967,11 @@
     '.swatch-pickable{position:relative;cursor:pointer;}',
     '.swatch-picker-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;padding:0;cursor:pointer;}',
     '.row-copy.overridden{border-left:2px solid #f59e0b;padding-left:3px;}',
+    // Mismo violeta que .tool-icon-live/pillLiveBtn — distingue de un
+    // vistazo qué propiedades tocó la IA (Sugerir) de las que tocó el
+    // humano a mano (ámbar). Va DESPUÉS de .overridden en la hoja para
+    // ganarle en la misma especificidad cuando las dos clases coinciden.
+    '.row-copy.overridden-claude{border-left:2px solid #8b5cf6;padding-left:3px;}',
     // Flash breve de "guardado" (ver commitStyleEdit) — sobre todo para el
     // picker de color nativo, que no tiene un botón de cerrar propio.
     '.row-copy.just-saved{background:rgba(34,197,94,.35);transition:background .5s ease-out;}',
@@ -687,6 +983,14 @@
     '.ac-item{padding:4px 8px;color:#e5e7eb;cursor:pointer;white-space:nowrap;text-align:left;}',
     '.ac-item:hover{background:#374151;}',
     '.ac-item.ac-active{background:#ec4899;color:#fff;}',
+    // Ítem de dos líneas (etiqueta + descripción) para el menú "/" del
+    // textarea de Asistencia Claude (ver attachSlashMenu) — a diferencia de
+    // .ac-item (una sola línea, texto plano), acá hace falta mostrar qué
+    // hace cada skill/comando, no solo su nombre.
+    '.ac-item-cmd{white-space:normal;font-family:ui-sans-serif,system-ui,sans-serif;padding:6px 8px;}',
+    '.ac-item-cmd .ac-item-cmd-label{font-weight:600;color:inherit;}',
+    '.ac-item-cmd .ac-item-cmd-desc{font-size:11px;color:#9ca3af;margin-top:1px;}',
+    '.ac-item-cmd.ac-active .ac-item-cmd-desc{color:#fbcfe8;}',
     // Botón ✕ flotante para cerrar el picker de color nativo (ver
     // makeEditableColorRow) — position:fixed porque no vive dentro del
     // popup nativo (no se puede), solo cerca. display:none por default,
@@ -829,17 +1133,894 @@
   helpBackdrop.appendChild(helpModal);
   helpRoot.appendChild(helpBackdrop);
 
-  function openHelp() {
+  // Mismo host/modal para la Ayuda general Y la Ayuda específica de
+  // Asistencia Claude (ver renderLive) — se reutiliza toda la mecánica
+  // (host, backdrop, cerrar, Esc) y solo cambia el contenido según qué
+  // getter se le pase. `activeHelpContentGetter` se guarda para que el
+  // refresco de idioma (ver applyI18n) reconstruya con el contenido
+  // correcto, no siempre el general.
+  var activeHelpContentGetter = getHelpContentHTML;
+  function openHelp(contentGetter) {
     // Se reconstruye en cada apertura (no solo una vez al cargar la
     // página) para reflejar el idioma activo en ese momento — mismo patrón
     // que openBpConfig()/openTreeModal() con sus propios modales.
-    helpContent.innerHTML = getHelpContentHTML();
-    helpContent.appendChild(buildCreditsSection());
+    activeHelpContentGetter = contentGetter || getHelpContentHTML;
+    helpContent.innerHTML = activeHelpContentGetter();
+    if (activeHelpContentGetter === getHelpContentHTML) helpContent.appendChild(buildCreditsSection());
     helpHost.style.display = 'block';
   }
   function closeHelp() { helpHost.style.display = 'none'; }
   helpCloseBtn.addEventListener('click', closeHelp);
   helpBackdrop.addEventListener('click', function (e) { if (e.target === helpBackdrop) closeHelp(); });
+
+  // ---------------------------------------------------------------------
+  // Pregunta STANDALONE de Claude (POST /ask-user en lens-sk-live-server.js)
+  // — a diferencia de liveQuestionBox (que vive DENTRO del panel de un
+  // pedido ya en curso, ligada al id de un /event que el navegador mandó
+  // primero), esta puede aparecer en cualquier momento, sin que el usuario
+  // haya hecho nada antes: es Claude quien la dispara desde el chat de
+  // VSCode cuando necesita que el usuario elija o conteste algo — regla
+  // estricta del usuario, esa pregunta NUNCA se hace en el chat de VSCode,
+  // tiene que llegar acá. Modal propio (mismo patrón que helpHost: host +
+  // shadow DOM aislado, fondo oscurecido) porque no depende de ningún
+  // elemento fijado ni de que el panel de Asistencia Claude esté abierto.
+  // ---------------------------------------------------------------------
+  var askUserHost = document.createElement('div');
+  askUserHost.id = 'claude-inspector-askuser-host';
+  askUserHost.setAttribute('data-lens-sk-own', '1');
+  askUserHost.style.cssText = 'all:initial; position:fixed; inset:0; z-index:2147483647; display:none;';
+  document.documentElement.appendChild(askUserHost);
+  var askUserRoot = askUserHost.attachShadow({ mode: 'open' });
+  var askUserStyle = document.createElement('style');
+  askUserStyle.textContent = [
+    ':host{all:initial;}',
+    '*{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}',
+    '.au-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px;}',
+    '.au-modal{position:relative;background:#111827;color:#e5e7eb;border:1px solid #ec4899;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.5);width:min(440px,100%);max-height:85vh;overflow:auto;padding:22px;scrollbar-width:thin;scrollbar-color:#374151 transparent;}',
+    '.au-close{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:8px;background:#1f2937;color:#e5e7eb;border:1px solid #374151;cursor:pointer;font-size:13px;line-height:1;}',
+    '.au-close:hover{background:#374151;}',
+    '.au-header{font-size:13px;font-weight:700;color:#f472b6;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;padding-right:26px;}',
+    '.au-question{font-size:14.5px;line-height:1.5;color:#f3f4f6;margin-bottom:16px;white-space:pre-line;}',
+    '.au-options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}',
+    '.au-option{display:flex;align-items:flex-start;gap:8px;background:#0b1220;border:1px solid #374151;border-radius:8px;padding:9px 10px;cursor:pointer;}',
+    '.au-option:hover{border-color:#6b7280;}',
+    '.au-option.au-option-selected{border-color:#ec4899;background:rgba(236,72,153,.08);}',
+    '.au-option input{margin-top:2px;flex-shrink:0;}',
+    '.au-option-body{display:flex;flex-direction:column;gap:2px;}',
+    '.au-option-label{font-size:13px;font-weight:600;color:#e5e7eb;}',
+    '.au-option-desc{font-size:12px;color:#9ca3af;line-height:1.4;}',
+    '.au-other-row{margin-bottom:14px;}',
+    '.au-other-row input{width:100%;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;}',
+    '.au-other-row input:focus{outline:1px solid #ec4899;}',
+    '.au-actions{display:flex;justify-content:flex-end;}',
+    '.au-submit{background:#ec4899;border:1px solid #db2777;color:#fff;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}',
+    '.au-submit:hover{background:#db2777;}',
+    '.au-submit:disabled{opacity:.4;cursor:not-allowed;}',
+  ].join('');
+  askUserRoot.appendChild(askUserStyle);
+  var askUserBackdrop = document.createElement('div');
+  askUserBackdrop.className = 'au-backdrop';
+  var askUserModal = document.createElement('div');
+  askUserModal.className = 'au-modal';
+  var askUserCloseBtn = document.createElement('button');
+  askUserCloseBtn.className = 'au-close';
+  askUserCloseBtn.textContent = '✕';
+  askUserCloseBtn.title = tr('close');
+  var askUserHeader = document.createElement('div');
+  askUserHeader.className = 'au-header';
+  askUserHeader.textContent = '❓ ' + tr('askUserHeaderLabel');
+  var askUserQuestionEl = document.createElement('div');
+  askUserQuestionEl.className = 'au-question';
+  var askUserOptionsEl = document.createElement('div');
+  askUserOptionsEl.className = 'au-options';
+  var askUserOtherRow = document.createElement('div');
+  askUserOtherRow.className = 'au-other-row';
+  var askUserOtherInput = document.createElement('input');
+  askUserOtherInput.type = 'text';
+  askUserOtherInput.placeholder = tr('liveQuestionAnswerPlaceholder');
+  askUserOtherRow.appendChild(askUserOtherInput);
+  var askUserActions = document.createElement('div');
+  askUserActions.className = 'au-actions';
+  var askUserSubmitBtn = document.createElement('button');
+  askUserSubmitBtn.className = 'au-submit';
+  askUserSubmitBtn.type = 'button';
+  askUserSubmitBtn.textContent = tr('liveQuestionAnswerSend');
+  askUserActions.appendChild(askUserSubmitBtn);
+  askUserModal.appendChild(askUserCloseBtn);
+  askUserModal.appendChild(askUserHeader);
+  askUserModal.appendChild(askUserQuestionEl);
+  askUserModal.appendChild(askUserOptionsEl);
+  askUserModal.appendChild(askUserOtherRow);
+  askUserModal.appendChild(askUserActions);
+  askUserBackdrop.appendChild(askUserModal);
+  askUserRoot.appendChild(askUserBackdrop);
+
+  var askUserCurrent = null; // { id, multiSelect }
+  var askUserSelected = []; // labels elegidos (radio: 1 elemento; checkbox: N)
+  function renderAskUserOptions(options, multiSelect) {
+    askUserOptionsEl.innerHTML = '';
+    askUserOptionsEl.style.display = (options && options.length) ? 'flex' : 'none';
+    askUserSelected = [];
+    if (!options || !options.length) return;
+    options.forEach(function (opt) {
+      var row = document.createElement('label');
+      row.className = 'au-option';
+      var input = document.createElement('input');
+      input.type = multiSelect ? 'checkbox' : 'radio';
+      input.name = 'au-choice';
+      input.value = opt.label;
+      input.addEventListener('change', function () {
+        if (multiSelect) {
+          askUserSelected = Array.prototype.slice.call(askUserOptionsEl.querySelectorAll('input:checked')).map(function (i) { return i.value; });
+        } else {
+          askUserSelected = [opt.label];
+          askUserOtherInput.value = '';
+          Array.prototype.forEach.call(askUserOptionsEl.children, function (c) { c.classList.remove('au-option-selected'); });
+        }
+        if (input.checked) row.classList.add('au-option-selected');
+        else row.classList.remove('au-option-selected');
+      });
+      var body = document.createElement('div');
+      body.className = 'au-option-body';
+      var label = document.createElement('div');
+      label.className = 'au-option-label';
+      label.textContent = opt.label;
+      body.appendChild(label);
+      if (opt.description) {
+        var desc = document.createElement('div');
+        desc.className = 'au-option-desc';
+        desc.textContent = opt.description;
+        body.appendChild(desc);
+      }
+      row.appendChild(input);
+      row.appendChild(body);
+      askUserOptionsEl.appendChild(row);
+    });
+  }
+  function openAskUserModal(data) {
+    askUserCurrent = { id: data.id, multiSelect: !!data.multiSelect };
+    askUserQuestionEl.textContent = data.question || '';
+    askUserOtherInput.value = '';
+    renderAskUserOptions(data.options, !!data.multiSelect);
+    askUserHost.style.display = 'block';
+    showToast('❓ ' + (data.question || ''), 'success');
+    if (!data.options || !data.options.length) askUserOtherInput.focus();
+  }
+  function closeAskUserModal() {
+    askUserHost.style.display = 'none';
+    askUserCurrent = null;
+    askUserPolledId = null;
+  }
+  function submitAskUserAnswer() {
+    if (!askUserCurrent) return;
+    var other = askUserOtherInput.value.trim();
+    var answer;
+    if (askUserCurrent.multiSelect) {
+      answer = askUserSelected.slice();
+      if (other) answer.push(other);
+    } else {
+      answer = other || (askUserSelected[0] || '');
+    }
+    var isEmpty = askUserCurrent.multiSelect ? !answer.length : !answer;
+    if (isEmpty) return;
+    var id = askUserCurrent.id;
+    askUserSubmitBtn.disabled = true;
+    fetch(liveHelperBase() + '/answer-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, answer: answer }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      askUserSubmitBtn.disabled = false;
+      if (!d || !d.ok) { showToast(tr('toastLiveQuestionSendFailed'), 'error'); return; }
+      closeAskUserModal();
+    }).catch(function () {
+      askUserSubmitBtn.disabled = false;
+      showToast(tr('toastLiveQuestionSendFailed'), 'error');
+    });
+  }
+  askUserSubmitBtn.addEventListener('click', submitAskUserAnswer);
+  askUserOtherInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitAskUserAnswer(); }
+  });
+  askUserCloseBtn.addEventListener('click', function () {
+    if (!askUserCurrent) return;
+    var id = askUserCurrent.id;
+    fetch(liveHelperBase() + '/answer-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, cancelled: true }),
+    }).catch(function () {});
+    closeAskUserModal();
+  });
+  // Poll liviano (ver comentario en GET /ask-user del servidor): a
+  // diferencia de Claude, que recibe la pregunta como resultado directo de
+  // su propio POST /ask-user (esa conexión queda abierta esperando), el
+  // navegador no tiene ninguna conexión abierta esperando esto — tiene que
+  // preguntar. Corre siempre (no depende de que el panel de Asistencia
+  // Claude esté abierto ni de que haya un elemento fijado), porque la
+  // pregunta puede no estar relacionada con ningún elemento puntual.
+  var askUserPolledId = null;
+  function pollAskUser() {
+    fetch(liveHelperBase() + '/ask-user')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.pending && d.id !== askUserPolledId) {
+          askUserPolledId = d.id;
+          openAskUserModal(d);
+        } else if ((!d || !d.pending) && askUserPolledId && askUserHost.style.display === 'block') {
+          // Claude retiró la pregunta (timeout del lado del servidor, etc.)
+          // sin que el usuario la hubiera contestado desde acá.
+          closeAskUserModal();
+        }
+      })
+      .catch(function () { /* servidor caído a mitad de camino: no rompe nada, se reintenta solo */ });
+  }
+
+  // ---------------------------------------------------------------------
+  // "Pedir cambio a Claude" (modo live) — vive siempre visible como
+  // contenido del panel de "Asistencia Claude" (ver renderLive más abajo),
+  // no hace falta ningún botón para revelarlo. Los elementos se crean una
+  // sola vez acá (persistentes) y se appendean adentro de `panel` — mismo
+  // patrón que layoutViewRow en la vista Layout. Sin `liveTarget` propio:
+  // ya se ve arriba de todo en pinnedInfo (📌), repetirlo acá era
+  // redundante.
+  // ---------------------------------------------------------------------
+  var liveTextarea = document.createElement('textarea');
+  liveTextarea.placeholder = tr('liveRequestPlaceholder');
+  // Menú "/" y "@" (ver attachComposeMenus, definida más abajo — function
+  // declaration, hoisted) — registrado ACÁ, ANTES del listener de "Enter
+  // envía" de más abajo, a propósito: los keydown de un mismo elemento
+  // corren en orden de registro, así que con el menú abierto este gana la
+  // carrera y usa stopImmediatePropagation en Enter para completar la
+  // sugerencia en vez de mandar el pedido a medio escribir.
+  attachComposeMenus(liveTextarea);
+  // Ya no es un switch — la captura va SIEMPRE adjunta a cada pedido
+  // (pedido explícito del usuario: la captura es "los ojos" de Claude sobre
+  // el proyecto, no algo opcional). Queda solo la etiqueta + el botón de
+  // editarla antes de mandar.
+  var liveScreenshotLabel = document.createElement('span');
+  liveScreenshotLabel.className = 'hint';
+  liveScreenshotLabel.textContent = tr('liveRequestAttachScreenshot');
+  var liveStatus = document.createElement('div');
+  liveStatus.className = 'live-status';
+  var liveComposeActionsRow = document.createElement('div');
+  liveComposeActionsRow.className = 'live-actions-row';
+  var liveCancelBtn = document.createElement('button');
+  liveCancelBtn.className = 'live-btn';
+  liveCancelBtn.textContent = tr('liveRequestCancel');
+  var liveSendBtn = document.createElement('button');
+  liveSendBtn.className = 'live-btn live-btn-send';
+  liveSendBtn.textContent = tr('liveRequestSend');
+  liveComposeActionsRow.appendChild(liveCancelBtn);
+  liveComposeActionsRow.appendChild(liveSendBtn);
+  // Sin texto no hay nada que mandar — deshabilitado por defecto y cada vez
+  // que el textarea queda vacío (a mano o por código, ver
+  // updateLiveSendBtnDisabled), para no poder ni hacer clic en un pedido
+  // vacío en primer lugar (antes solo se frenaba en el click handler).
+  liveSendBtn.disabled = true;
+  function updateLiveSendBtnDisabled() {
+    liveSendBtn.disabled = !liveTextarea.value.trim();
+  }
+  liveTextarea.addEventListener('input', updateLiveSendBtnDisabled);
+  liveTextarea.addEventListener('input', function () {
+    if (pinnedEl) persistLiveText(cssSelectorFor(pinnedEl), liveTextarea.value);
+  });
+  // Enter envía (Shift+Enter sigue insertando salto de línea, criterio
+  // estándar de cualquier caja de chat) — el listener vive en el propio
+  // textarea, no en el atajo global (onShortcutKeydown ya ignora Enter con
+  // el foco en un campo editable, así que no compite con doTreeShortcut).
+  liveTextarea.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      liveSendBtn.click();
+    }
+  });
+  // Última respuesta final (no la línea de estado en curso, ver liveStatus
+  // arriba): se sobreescribe cada vez que llega un resultado, nunca se
+  // acumula en una lista — para eso ya está el HISTORIAL más abajo. Esto
+  // es solo "lo último que pasó", visible sin tener que scrollear.
+  var liveLastResultBox = document.createElement('div');
+  liveLastResultBox.className = 'live-last-result';
+  liveLastResultBox.style.display = 'none';
+  // Pregunta de Claude a mitad de un pedido (protocolo /ask ↔ /answer, ver
+  // lens-sk-live-server.js) — este es el ÚNICO canal por el que Claude debe
+  // preguntarle algo al usuario mientras resuelve un pedido de esta
+  // herramienta: nunca el chat de VSCode, que el usuario puede no estar
+  // mirando en ese momento. Oculta por defecto, la muestra
+  // startLiveProgressPoll cuando llega una pregunta nueva por /progress.
+  var liveQuestionBox = document.createElement('div');
+  liveQuestionBox.className = 'live-question';
+  var liveQuestionText = document.createElement('div');
+  liveQuestionText.className = 'live-question-text';
+  var liveQuestionRow = document.createElement('div');
+  liveQuestionRow.className = 'live-question-row';
+  var liveQuestionInput = document.createElement('input');
+  liveQuestionInput.type = 'text';
+  liveQuestionInput.placeholder = tr('liveQuestionAnswerPlaceholder');
+  var liveQuestionSendBtn = document.createElement('button');
+  liveQuestionSendBtn.type = 'button';
+  liveQuestionSendBtn.textContent = tr('liveQuestionAnswerSend');
+  liveQuestionRow.appendChild(liveQuestionInput);
+  liveQuestionRow.appendChild(liveQuestionSendBtn);
+  liveQuestionBox.appendChild(liveQuestionText);
+  liveQuestionBox.appendChild(liveQuestionRow);
+  var liveQuestionCurrentId = null;
+  function sendLiveAnswer() {
+    var answer = liveQuestionInput.value.trim();
+    if (!answer || !liveQuestionCurrentId) return;
+    var id = liveQuestionCurrentId;
+    liveQuestionSendBtn.disabled = true;
+    fetch(liveHelperBase() + '/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, answer: answer }),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      liveQuestionSendBtn.disabled = false;
+      if (!d || !d.ok) { showToast(tr('toastLiveQuestionSendFailed'), 'error'); return; }
+      liveQuestionBox.style.display = 'none';
+      liveQuestionInput.value = '';
+      liveQuestionCurrentId = null;
+    }).catch(function () {
+      liveQuestionSendBtn.disabled = false;
+      showToast(tr('toastLiveQuestionSendFailed'), 'error');
+    });
+  }
+  liveQuestionSendBtn.addEventListener('click', sendLiveAnswer);
+  liveQuestionInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); sendLiveAnswer(); }
+  });
+  // Botón "editar la captura" (recuadros/flechas/texto sobre la imagen
+  // antes de mandarla) — siempre habilitado, ya no depende de ningún
+  // toggle (la captura misma ya no es opcional).
+  var liveEditCaptureBtn = document.createElement('button');
+  liveEditCaptureBtn.className = 'live-edit-capture-btn';
+  liveEditCaptureBtn.textContent = '✏️';
+  liveEditCaptureBtn.title = tr('liveEditCaptureTitle');
+  // Adjuntar documento (PDF/DOCX/XLSX/imagen) — se procesa a texto/Markdown
+  // limpio (o imagen comprimida) del lado del navegador, ver
+  // processAttachedFile más abajo. Input nativo oculto, disparado por el
+  // botón 📎; "multiple" porque puede tener sentido mandar más de uno junto
+  // (ej. una hoja de cálculo + su captura de referencia).
+  var liveAttachInput = document.createElement('input');
+  liveAttachInput.type = 'file';
+  liveAttachInput.accept = '.pdf,.docx,.xlsx,.xls,image/*';
+  liveAttachInput.multiple = true;
+  liveAttachInput.style.display = 'none';
+  var liveAttachBtn = document.createElement('button');
+  liveAttachBtn.className = 'live-edit-capture-btn';
+  liveAttachBtn.textContent = '📎';
+  liveAttachBtn.title = tr('liveAttachDocTitle');
+  var liveScreenshotRow = document.createElement('div');
+  liveScreenshotRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
+  liveScreenshotRow.appendChild(liveScreenshotLabel);
+  liveScreenshotRow.appendChild(liveEditCaptureBtn);
+  liveScreenshotRow.appendChild(liveAttachBtn);
+  liveScreenshotRow.appendChild(liveAttachInput);
+  // {name, kind, content, truncated}[] — kind: 'pdf'|'docx'|'xlsx'|'image'.
+  // Se limpia (o se restaura, ver loadPersistedAttachments) al fijar un
+  // elemento, y se limpia de verdad después de cada envío exitoso.
+  var liveAttachments = [];
+  // Persistidos en localStorage por página + selector (mismo criterio que
+  // getOverridesStore) para que sobrevivan a un F5 — antes se perdían con
+  // cualquier recarga, pedido explícito del usuario.
+  var LIVE_ATTACHMENTS_STORAGE_KEY = '__claudeInspectorLiveAttachments';
+  function getLiveAttachmentsStore() {
+    try { var raw = localStorage.getItem(LIVE_ATTACHMENTS_STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; }
+  }
+  function setLiveAttachmentsStore(store) {
+    try { localStorage.setItem(LIVE_ATTACHMENTS_STORAGE_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+  function loadPersistedAttachments(selector) {
+    var store = getLiveAttachmentsStore();
+    var page = store[pageOverrideKey()];
+    return (page && page[selector]) || [];
+  }
+  function persistLiveAttachments(selector) {
+    var store = getLiveAttachmentsStore();
+    var page = store[pageOverrideKey()] || (store[pageOverrideKey()] = {});
+    if (liveAttachments.length) page[selector] = liveAttachments;
+    else delete page[selector];
+    setLiveAttachmentsStore(store);
+  }
+  // Mismo criterio que los adjuntos de arriba (por página + selector) para
+  // que el texto en curso del pedido tampoco se pierda con un F5.
+  var LIVE_TEXT_STORAGE_KEY = '__claudeInspectorLiveText';
+  function getLiveTextStore() {
+    try { var raw = localStorage.getItem(LIVE_TEXT_STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; }
+  }
+  function setLiveTextStore(store) {
+    try { localStorage.setItem(LIVE_TEXT_STORAGE_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+  function loadPersistedText(selector) {
+    var store = getLiveTextStore();
+    var page = store[pageOverrideKey()];
+    return (page && page[selector]) || '';
+  }
+  function persistLiveText(selector, text) {
+    var store = getLiveTextStore();
+    var page = store[pageOverrideKey()] || (store[pageOverrideKey()] = {});
+    if (text) page[selector] = text;
+    else delete page[selector];
+    setLiveTextStore(store);
+  }
+  var liveAttachmentsList = document.createElement('div');
+  liveAttachmentsList.className = 'live-attachments-list';
+  function renderLiveAttachments() {
+    liveAttachmentsList.innerHTML = '';
+    liveAttachmentsList.style.display = liveAttachments.length ? 'flex' : 'none';
+    liveAttachments.forEach(function (att, idx) {
+      var chip = document.createElement('span');
+      chip.className = 'live-attachment-chip';
+      var icon = att.kind === 'pdf' ? '📄' : att.kind === 'docx' ? '📝' : att.kind === 'xlsx' ? '📊' : '🖼️';
+      var label = document.createElement('span');
+      label.textContent = icon + ' ' + att.name + (att.truncated ? ' ⚠️' : '');
+      if (att.truncated) label.title = tr('liveAttachTruncatedTitle');
+      var removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.title = tr('liveAttachRemoveTitle');
+      removeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        liveAttachments.splice(idx, 1);
+        if (pinnedEl) persistLiveAttachments(cssSelectorFor(pinnedEl));
+        renderLiveAttachments();
+      });
+      chip.appendChild(label);
+      chip.appendChild(removeBtn);
+      liveAttachmentsList.appendChild(chip);
+    });
+  }
+  renderLiveAttachments();
+  // Usada tanto por el input nativo (📎) como por soltar archivos arrastrados
+  // sobre la caja de texto — mismo procesamiento, misma UI de carga.
+  function handleAttachedFileList(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    var original = liveAttachBtn.textContent;
+    liveAttachBtn.textContent = '⏳';
+    liveAttachBtn.disabled = true;
+    Promise.all(files.map(function (f) {
+      return processAttachedFile(f).catch(function (e) {
+        showToast('❌ ' + f.name + ': ' + ((e && e.message) || tr('toastLiveAttachFailed')), 'error');
+        return null;
+      });
+    })).then(function (results) {
+      liveAttachBtn.textContent = original;
+      liveAttachBtn.disabled = false;
+      var addedAny = false;
+      results.forEach(function (r) {
+        if (!r) return;
+        if (Array.isArray(r)) { r.forEach(function (item) { liveAttachments.push(item); }); addedAny = true; }
+        else { liveAttachments.push(r); addedAny = true; }
+      });
+      if (addedAny) {
+        showToast(tr('toastLiveAttachAdded'), 'success');
+        if (pinnedEl) persistLiveAttachments(cssSelectorFor(pinnedEl));
+      }
+      renderLiveAttachments();
+    });
+  }
+  liveAttachBtn.addEventListener('click', function () { liveAttachInput.click(); });
+  liveAttachInput.addEventListener('change', function () {
+    var files = liveAttachInput.files;
+    handleAttachedFileList(files);
+    liveAttachInput.value = '';
+  });
+  // Pegar una imagen copiada (Ctrl+V) directo en el textarea la adjunta igual
+  // que 📎/arrastrar-soltar — mismo destino final (handleAttachedFileList).
+  // Solo se frena el paste normal (preventDefault) si de verdad había una
+  // imagen en el portapapeles; pegar texto sigue funcionando sin tocar nada.
+  liveTextarea.addEventListener('paste', function (e) {
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    var files = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+        var f = items[i].getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      handleAttachedFileList(files);
+    }
+  });
+  // Imagen YA editada (con anotaciones) lista para usar en el próximo envío
+  // — si está seteada, el envío la usa en vez de recapturar de cero (ver
+  // liveSendBtn más abajo). Se limpia al fijar un elemento nuevo (pin()) y
+  // después de cada envío exitoso.
+  var liveEditedScreenshot = null;
+  liveEditCaptureBtn.addEventListener('click', function () {
+    if (!pinnedEl) return;
+    var btn = liveEditCaptureBtn;
+    var original = btn.textContent;
+    btn.textContent = '⏳';
+    captureElementDataURL(pinnedEl).then(function (dataUrl) {
+      btn.textContent = original;
+      if (!dataUrl) { showToast(tr('toastCaptureFailed'), 'error'); return; }
+      openImageEditor(dataUrl, {
+        confirmLabelKey: 'imgEditorConfirmUse',
+        onConfirm: function (edited) {
+          liveEditedScreenshot = edited;
+          showToast(tr('toastLiveScreenshotEdited'), 'success');
+        },
+      });
+    });
+  });
+  var liveComposeBox = document.createElement('div');
+  liveComposeBox.className = 'live-compose';
+  liveComposeBox.appendChild(liveTextarea);
+  liveComposeBox.appendChild(liveScreenshotRow);
+  liveComposeBox.appendChild(liveAttachmentsList);
+  liveComposeBox.appendChild(liveStatus);
+  liveComposeBox.appendChild(liveQuestionBox);
+  liveComposeBox.appendChild(liveLastResultBox);
+  liveComposeBox.appendChild(liveComposeActionsRow);
+  // Arrastrar y soltar un archivo directo sobre la caja de "Pedir cambio" —
+  // mismo destino final que el botón 📎 (handleAttachedFileList). preventDefault
+  // en dragover es obligatorio o el navegador nunca dispara "drop" (abre el
+  // archivo en la pestaña en su lugar).
+  ['dragenter', 'dragover'].forEach(function (evt) {
+    liveComposeBox.addEventListener(evt, function (e) {
+      if (!pinnedEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      liveComposeBox.classList.add('live-compose-dragover');
+    });
+  });
+  // dragleave dispara al pasar por CUALQUIER hijo, no solo al salir de la
+  // caja — solo sacar la clase si de verdad se fue a algo fuera de ella
+  // (relatedTarget nulo cuenta como "salió de la ventana").
+  liveComposeBox.addEventListener('dragleave', function (e) {
+    if (!e.relatedTarget || !liveComposeBox.contains(e.relatedTarget)) {
+      liveComposeBox.classList.remove('live-compose-dragover');
+    }
+  });
+  liveComposeBox.addEventListener('drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    liveComposeBox.classList.remove('live-compose-dragover');
+    if (!pinnedEl) return;
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) handleAttachedFileList(files);
+  });
+
+  // ---------------------------------------------------------------------
+  // Historial de Asistencia Claude (ver getLiveHistory/addLiveHistoryEntry)
+  // + "Aplicar todos los cambios": a diferencia de 📤 Aplicar (que solo
+  // toca el elemento pineado), esto manda TODOS los overrides pendientes
+  // de la página de una — de Claude Y manuales por igual — y la respuesta
+  // linkea cada archivo tocado.
+  // ---------------------------------------------------------------------
+  var liveHistorySection = document.createElement('div');
+  liveHistorySection.className = 'live-history';
+  var liveHistoryHeader = document.createElement('div');
+  liveHistoryHeader.className = 'live-history-header';
+  var liveHistoryTitle = document.createElement('span');
+  liveHistoryTitle.textContent = tr('liveHistoryTitle');
+  var liveCommitAllBtn = document.createElement('button');
+  liveCommitAllBtn.className = 'live-btn live-btn-send';
+  liveCommitAllBtn.textContent = tr('liveCommitAllBtnLabel');
+  liveCommitAllBtn.title = tr('liveCommitAllBtnTitle');
+  liveHistoryHeader.appendChild(liveHistoryTitle);
+  liveHistoryHeader.appendChild(liveCommitAllBtn);
+  var liveHistoryList = document.createElement('div');
+  liveHistoryList.className = 'live-history-list';
+  liveHistorySection.appendChild(liveHistoryHeader);
+  liveHistorySection.appendChild(liveHistoryList);
+  // Al final de todo el historial, no en el header — a propósito lejos de
+  // "Aplicar todos" para no quedar como un par de opuestos uno al lado del
+  // otro. Oculto por defecto (ver renderLiveHistory): solo tiene sentido
+  // mostrarlo si hay algo para borrar.
+  var liveHistoryClearBtn = document.createElement('button');
+  liveHistoryClearBtn.className = 'live-history-clear-btn';
+  liveHistoryClearBtn.textContent = tr('liveHistoryClearBtnLabel');
+  liveHistoryClearBtn.title = tr('liveHistoryClearBtnTitle');
+  liveHistorySection.appendChild(liveHistoryClearBtn);
+  function clearLiveHistory() {
+    var store = getLiveHistoryStore();
+    delete store[pageOverrideKey()];
+    setLiveHistoryStore(store);
+    renderLiveHistory();
+    renderLastLiveResult();
+  }
+  liveHistoryClearBtn.addEventListener('click', clearLiveHistory);
+
+  // "Aplicado de verdad a un archivo" — para 'commit-all' es directo (ok:true
+  // ES la escritura al archivo), para 'suggest' depende de si algún commit
+  // posterior lo marcó (ver markLiveHistoryEntriesApplied); una sugerencia
+  // ok:true que todavía no se aplicó sigue siendo SOLO vista previa.
+  function isLiveHistoryEntryApplied(entry) {
+    if (!entry.ok) return false;
+    return entry.type === 'commit-all' || entry.applied === true;
+  }
+  function appendAppliedTagIfNeeded(row, entry) {
+    if (!isLiveHistoryEntryApplied(entry)) return;
+    var tag = document.createElement('div');
+    tag.className = 'live-history-applied-tag';
+    // 'suggest' = nació de 🪄 Pedir cambio (sugerencia de la IA); 'commit-all'
+    // puede mezclar overrides de IA y manuales en un mismo envío, así que ahí
+    // no se afirma el origen — solo se marca "aplicado", sin robot.
+    tag.textContent = tr(entry.type === 'suggest' ? 'liveHistoryAppliedAiLabel' : 'liveHistoryAppliedLabel');
+    row.appendChild(tag);
+  }
+  function buildLiveHistoryRow(entry) {
+    var row = document.createElement('div');
+    var applied = isLiveHistoryEntryApplied(entry);
+    row.className = 'live-history-item' + (entry.ok ? '' : ' live-history-item-error') + (applied ? ' live-history-item-applied' : '');
+    var timeLabel = new Date(entry.timestamp).toLocaleTimeString();
+    if (entry.type === 'commit-all') {
+      var head = document.createElement('div');
+      head.className = 'live-history-item-head';
+      head.textContent = (entry.ok ? '📤 ' : '❌ ') + tr('liveCommitAllHistoryLabel') + ' · ' + timeLabel;
+      row.appendChild(head);
+      // Un solo link compacto por archivo (nombre + línea, ver más abajo) —
+      // antes eran dos elementos clickeables por archivo (etiqueta del
+      // componente + ruta), pedido explícito del usuario de simplificar:
+      // "el nombre del archivo con el link adentro", nada más.
+      (entry.files || []).forEach(function (f) {
+        var fileLink = document.createElement('div');
+        fileLink.className = 'live-history-file-link';
+        fileLink.textContent = '📍 ' + f.file + (f.line ? ':' + f.line : '');
+        fileLink.title = tr('liveLocateBtnTitle');
+        fileLink.addEventListener('click', function (e) {
+          e.stopPropagation();
+          window.open('vscode://file/' + themeRootCache + '/' + f.file + (f.line ? ':' + f.line : ''), '_blank');
+        });
+        row.appendChild(fileLink);
+      });
+      // El historial es una bitácora, no un lugar para que Claude explique
+      // cosas — nota solo cuando algo salió mal (mismo criterio que 'suggest'
+      // más abajo).
+      if (!entry.ok && entry.note) {
+        var noteEl = document.createElement('div');
+        noteEl.className = 'hint';
+        noteEl.textContent = entry.note;
+        row.appendChild(noteEl);
+      }
+      appendAppliedTagIfNeeded(row, entry);
+      return row;
+    }
+    // entry.type === 'suggest'
+    var head2 = document.createElement('div');
+    head2.className = 'live-history-item-head';
+    head2.textContent = (entry.ok ? '✅ ' : '❌ ') + (entry.label || entry.selector) + ' · ' + timeLabel;
+    var promptEl = document.createElement('div');
+    promptEl.className = 'live-history-prompt';
+    promptEl.textContent = entry.prompt;
+    row.appendChild(head2);
+    row.appendChild(promptEl);
+    if (!entry.ok && entry.note) {
+      var noteEl2 = document.createElement('div');
+      noteEl2.className = 'hint';
+      noteEl2.textContent = entry.note;
+      row.appendChild(noteEl2);
+    }
+    appendAppliedTagIfNeeded(row, entry);
+    row.title = tr('selectElement');
+    row.addEventListener('click', function () {
+      pinFromHistorySelectors(entry.selector, entry.structuralSelector);
+    });
+    return row;
+  }
+  function renderLiveHistory() {
+    liveHistoryList.innerHTML = '';
+    liveCommitAllBtn.disabled = countAllOverrides() === 0;
+    var history = getLiveHistory();
+    liveHistoryClearBtn.style.display = history.length ? 'block' : 'none';
+    if (!history.length) {
+      var empty = document.createElement('div');
+      empty.className = 'hint';
+      empty.textContent = tr('liveHistoryEmpty');
+      liveHistoryList.appendChild(empty);
+      return;
+    }
+    history.forEach(function (entry) { liveHistoryList.appendChild(buildLiveHistoryRow(entry)); });
+  }
+  function doLiveCommitAll() {
+    var store = getOverridesStore();
+    var page = store[pageOverrideKey()] || {};
+    var selectors = Object.keys(page);
+    if (!selectors.length) { showToast(tr('toastLiveCommitAllNone'), 'warn'); return; }
+    // Selector estructural (sin clases) calculado ACÁ, con el elemento real
+    // todavía resuelto por el selector "bonito" — se guarda por selector de
+    // origen para adjuntarlo a cada archivo devuelto, sin depender de que la
+    // respuesta lo incluya (ver cssSelectorForStructural).
+    var structuralBySelector = {};
+    var items = selectors.map(function (selector) {
+      var el = uniqueElementFor(selector);
+      var propsObj = {};
+      Object.keys(page[selector]).forEach(function (prop) { propsObj[prop] = page[selector][prop].value; });
+      if (el) structuralBySelector[selector] = cssSelectorForStructural(el);
+      // Mismo fileHint resuelto client-side que el resto del protocolo —
+      // acá importa más todavía, porque "Aplicar todos" puede juntar items
+      // de componentes distintos en un solo pedido.
+      var resolvedItemFile = el ? resolveComponentFileClientSide(el) : null;
+      var fileHint = resolvedItemFile ? { file: resolvedItemFile.file, line: resolveElementLine(resolvedItemFile, el) } : null;
+      return { selector: selector, label: el ? labelFor(el) : selector, overrides: propsObj, fileHint: fileHint };
+    });
+    setLiveRequestBusy(true);
+    setBusyCursor(true);
+    var commitAllBp = currentBreakpointInfo();
+    var payload = { id: randomLiveId(), type: 'commit-all', items: items, viewportWidth: commitAllBp.width, breakpoint: commitAllBp.breakpoint, twcssMode: !!(twcssInput && twcssInput.checked) };
+    currentLiveRequestId = payload.id;
+    showToast(tr('toastLiveCommitAllSending'), 'success', LIVE_TOAST_DURATION_MS);
+    liveLastResultBox.textContent = '';
+    liveLastResultBox.style.display = 'none';
+    // "En curso" (liveStatus, título fijo + puntos animados) mientras se
+    // espera — las conclusiones reales de Claude (/progress) y el resultado
+    // final van a liveLastResultBox, nunca acá.
+    var stopProgressPollAll = startLiveProgressPoll(payload.id, liveStatus, tr('liveCommitAllSendingLabel'), liveLastResultBox);
+    sendLiveEvent(payload)
+      .then(function (result) {
+        stopProgressPollAll();
+        setBusyCursor(false);
+        setLiveRequestBusy(false);
+        if (result && result.ok) {
+          var files = (result.files || []).map(function (f) {
+            return Object.assign({}, f, { structuralSelector: structuralBySelector[f.selector] });
+          });
+          files.forEach(function (f) { if (f.selector) { clearCommittedOverrideBookkeeping(f.selector); markLiveHistoryEntriesApplied(f.selector); } });
+          updateOverrideIndicator();
+          flashAppliedBadgesIfEmpty();
+          addLiveHistoryEntry({ type: 'commit-all', id: payload.id, timestamp: Date.now(), ok: true, note: result.note || '', files: files });
+          showToast(tr('toastLiveCommitAllApplied'), 'success', LIVE_TOAST_DURATION_MS);
+        } else {
+          var failNoteAll = (result && (result.note || result.error || result.message)) || '';
+          addLiveHistoryEntry({ type: 'commit-all', id: payload.id, timestamp: Date.now(), ok: false, note: failNoteAll, files: [] });
+          showToast(tr('toastLiveCommitAllFailed'), 'error', LIVE_TOAST_DURATION_MS);
+        }
+        refreshPanelKeepScroll();
+      })
+      .catch(function (e) {
+        stopProgressPollAll();
+        setBusyCursor(false);
+        setLiveRequestBusy(false);
+        var errMsgAll = (e && e.message) || '';
+        addLiveHistoryEntry({ type: 'commit-all', id: payload.id, timestamp: Date.now(), ok: false, note: errMsgAll, files: [] });
+        showToast(tr('toastLiveCommitAllFailed'), 'error', LIVE_TOAST_DURATION_MS);
+        refreshPanelKeepScroll();
+      });
+  }
+  liveCommitAllBtn.addEventListener('click', doLiveCommitAll);
+
+  // Cancelar ya no "cierra" nada (el formulario está siempre visible) —
+  // ahora solo descarta el texto escrito y saca el foco del textarea
+  // (no lo mantiene enfocado — a diferencia de "abrir" el formulario, acá
+  // el usuario está terminando la interacción, no empezándola). Si HAY un
+  // pedido en curso (currentLiveRequestId), además lo corta de verdad
+  // (POST /cancel) — pedido explícito del usuario: antes solo limpiaba el
+  // texto y el pedido seguía viajando igual, esperando a Claude.
+  liveCancelBtn.addEventListener('click', function () {
+    if (currentLiveRequestId) {
+      var cancelId = currentLiveRequestId;
+      fetch(liveHelperBase() + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: cancelId }),
+      }).catch(function () { /* si falla el fetch de /cancel, el /event original igual resuelve solo por timeout — no rompe nada */ });
+    }
+    liveTextarea.value = '';
+    liveTextarea.blur();
+    updateLiveSendBtnDisabled();
+    if (pinnedEl) persistLiveText(cssSelectorFor(pinnedEl), '');
+  });
+
+  liveSendBtn.addEventListener('click', function () {
+    if (!pinnedEl) return;
+    var prompt = liveTextarea.value.trim();
+    if (!prompt) { liveTextarea.focus(); return; }
+    setLiveRequestBusy(true);
+    setBusyCursor(true);
+    var el = pinnedEl;
+    var withScreenshot = true;
+    // payload (con su id) se arma ANTES de esperar la captura — así el poll
+    // de progreso puede arrancar ya mismo, sin depender de que termine la
+    // captura de pantalla primero.
+    var payload = buildLiveEventPayload(el, { type: 'suggest', prompt: prompt });
+    currentLiveRequestId = payload.id;
+    showToast(tr('toastLiveSuggestSending'), 'success', LIVE_TOAST_DURATION_MS);
+    // La respuesta anterior se queda visible mientras no haya una nueva —
+    // eso está bien (pedido explícito: no borrarla "al terminar"). Pero
+    // apenas arranca un pedido NUEVO, sí hay que blanquearla: si no,
+    // mientras se procesa el pedido actual se sigue viendo la respuesta de
+    // OTRO pedido anterior, y puede confundirse con la respuesta de este.
+    liveLastResultBox.textContent = '';
+    liveLastResultBox.style.display = 'none';
+    var stopProgressPoll = startLiveProgressPoll(payload.id, liveStatus, tr('liveRequestSending'), liveLastResultBox);
+    if (liveAttachments.length) payload.attachments = liveAttachments;
+    (withScreenshot ? (liveEditedScreenshot ? Promise.resolve(liveEditedScreenshot) : captureStructureContextDataURL(el)) : Promise.resolve(null))
+      .then(function (screenshot) {
+        if (screenshot) payload.screenshot = screenshot;
+        return sendLiveEvent(payload);
+      })
+      .then(function (result) {
+        stopProgressPoll();
+        setBusyCursor(false);
+        setLiveRequestBusy(false);
+        if (result && result.ok) {
+          var selector = cssSelectorFor(el);
+          var overrides = result.overrides || {};
+          var originalClassName = el.className;
+          // Envuelto en una función (no una declaración suelta) para que el
+          // closure capture selector/el/payload/prompt de ESTA respuesta
+          // puntual, sin pisarse con otro pedido si el usuario manda uno
+          // nuevo antes de que este termine de resolver el fallback async.
+          var finishSuggestSuccess = function () {
+            liveEditedScreenshot = null;
+            liveAttachments = [];
+            persistLiveAttachments(selector);
+            renderLiveAttachments();
+            saveState();
+            updateOverrideIndicator();
+            updateLiveActionsVisibility();
+            addLiveHistoryEntry({
+              type: 'suggest', id: payload.id, timestamp: Date.now(),
+              selector: selector, structuralSelector: cssSelectorForStructural(el), label: payload.componentGuess, prompt: prompt,
+              ok: true, note: (result && result.note) || '', applied: false
+            });
+            // Si la vista activa es Estilos o Asistencia Claude, redibujarla
+            // ahora — si no, una propiedad nueva (ej. filter, recién agregada
+            // a customStyleProps) quedaba aplicada de verdad pero invisible
+            // en el panel, y el historial no mostraba la entrada recién
+            // agregada hasta el próximo refresco por otro motivo.
+            if (activeTool === 'styles' || activeTool === 'live') refreshPanelKeepScroll();
+            liveTextarea.value = '';
+            persistLiveText(selector, '');
+            updateLiveSendBtnDisabled();
+            // El resultado final ("💬 Tu respuesta: ...") lo pinta solo
+            // renderLastLiveResult en liveLastResultBox, disparado por el
+            // addLiveHistoryEntry de más arriba — liveStatus ya se vació solo
+            // (ver stopLiveProgressPoll), es la línea de "en curso", no la de
+            // resultado.
+            flashButtonFeedback(liveSendBtn, '✅');
+            showToast('🤖 ' + tr('toastLiveSuggestApplied'), 'success', LIVE_TOAST_DURATION_MS);
+          };
+          applyOverridesSequential(el, selector, originalClassName, overrides, function () {
+            // Cambios en un descendiente puntual del elemento pineado (ej. el
+            // logo adentro del footer) — mismo mecanismo exacto que si el
+            // humano hubiese pineado ESE hijo y tipeado la propiedad a mano
+            // (cssSelectorFor + setElementOverride sobre su propio selector
+            // único), no un sistema aparte. El pedido tiene que resolver
+            // adentro del elemento pineado (querySelector, no global) para no
+            // tocar nada fuera de lo que el usuario realmente fijó. Secuencial
+            // (no Promise.all): cada hijo comparte el mismo helper que puede
+            // necesitar el probe único del CDN (ver applyOverridesSequential).
+            var childOverrides = result.childOverrides || [];
+            var ci = 0;
+            function nextChild() {
+              if (ci >= childOverrides.length) { finishSuggestSuccess(); return; }
+              var child = childOverrides[ci++];
+              var childEl = child && child.selector ? el.querySelector(child.selector) : null;
+              if (!childEl) { nextChild(); return; }
+              var childSelector = cssSelectorFor(childEl);
+              applyOverridesSequential(childEl, childSelector, childEl.className, child.props || {}, nextChild);
+            }
+            nextChild();
+          });
+        } else {
+          var failNote = (result && (result.note || result.error || result.message)) || '';
+          showToast('🤖 ' + tr('toastLiveSuggestFailed'), 'error', LIVE_TOAST_DURATION_MS);
+          addLiveHistoryEntry({
+            type: 'suggest', id: payload.id, timestamp: Date.now(),
+            selector: cssSelectorFor(el), structuralSelector: cssSelectorForStructural(el), label: payload.componentGuess, prompt: prompt,
+            ok: false, note: failNote, applied: false
+          });
+          if (activeTool === 'live') refreshPanelKeepScroll();
+        }
+      })
+      .catch(function (e) {
+        stopProgressPoll();
+        setBusyCursor(false);
+        setLiveRequestBusy(false);
+        var errMsg = (e && e.message) || '';
+        showToast('🤖 ' + tr('toastLiveSuggestFailed'), 'error', LIVE_TOAST_DURATION_MS);
+        addLiveHistoryEntry({
+          type: 'suggest', id: payload.id, timestamp: Date.now(),
+          selector: cssSelectorFor(el), structuralSelector: cssSelectorForStructural(el), label: payload.componentGuess, prompt: prompt,
+          ok: false, note: errMsg, applied: false
+        });
+        if (activeTool === 'live') refreshPanelKeepScroll();
+      });
+  });
 
   // ---------------------------------------------------------------------
   // Popup: </> Estructura HTML — árbol anidado del elemento fijado y sus
@@ -1146,6 +2327,49 @@
       el.className.trim().split(/\s+/).forEach(function (c) { if (c) set[c] = true; });
     });
     return Object.keys(set).sort();
+  }
+  // Notación compacta tipo Emmet (tag.clase, sin cierres, indentado por
+  // jerarquía) para mandarle a Claude contexto de estructura sin gastar los
+  // tokens de un HTML completo — pedido explícito del usuario. Corridas de
+  // hermanos IDÉNTICOS (mismo tag+id+clases) se colapsan: se muestra la
+  // subestructura completa del primero una sola vez, anotada con "×N" en
+  // vez de repetir los otros N-1 (típico en grids de cards repetidas).
+  var COMPACT_DOM_MAX_NODES = 400;
+  function compactNodeSignature(node) {
+    var cls = (node.className && typeof node.className === 'string') ? node.className.trim().split(/\s+/).filter(Boolean) : [];
+    var idPart = node.id ? '#' + node.id : '';
+    return node.tagName.toLowerCase() + idPart + (cls.length ? '.' + cls.join('.') : '');
+  }
+  function buildCompactDomTree(rootEl) {
+    var lines = [];
+    var count = 0, truncated = false;
+    var ownHosts = [host, helpHost, treeHost, bpHost, layoutOverlayRoot, badge, hoverOutline, pinOutline, marginOverlay, borderOverlay, paddingOverlay, contentOverlay];
+    function leafText(node) {
+      if (node.children.length) return '';
+      var t = (node.textContent || '').replace(/\s+/g, ' ').trim();
+      return t ? ' "' + t.slice(0, 40) + (t.length > 40 ? '…' : '') + '"' : '';
+    }
+    function walk(node, depth) {
+      if (truncated || ownHosts.indexOf(node) !== -1) return;
+      if (count >= COMPACT_DOM_MAX_NODES) { truncated = true; return; }
+      count++;
+      lines.push('  '.repeat(depth) + compactNodeSignature(node) + leafText(node));
+      var lineIdx = lines.length - 1;
+      var children = Array.prototype.filter.call(node.children, function (c) { return ownHosts.indexOf(c) === -1; });
+      var i = 0;
+      while (i < children.length && !truncated) {
+        var j = i;
+        var sig = compactNodeSignature(children[i]);
+        while (j + 1 < children.length && compactNodeSignature(children[j + 1]) === sig) j++;
+        var runLen = j - i + 1;
+        var beforeCount = count;
+        walk(children[i], depth + 1);
+        if (runLen > 1 && count > beforeCount) lines[lineIdx + 1] += ' ×' + runLen;
+        i = j + 1;
+      }
+    }
+    walk(rootEl, 0);
+    return { text: lines.join('\n'), truncated: truncated };
   }
   function buildTreeData(rootEl) {
     var count = 0, truncated = false;
@@ -1559,6 +2783,31 @@
   // del código, más fácil de mantener así que moviendo bloques enteros.
   pillLabel.style.order = '0';
   pill.appendChild(pillLabel);
+  // Acceso directo a "Asistencia Claude" (grupo del modo live) — copia del
+  // botón ✨ Sugerir del panel, mismo destino, mismo ícono, pero con la
+  // paleta violeta propia (.tool-icon-live) para distinguirlo del resto de
+  // accesos de la pastilla. Entre el Menú y el cursor de Inspección a
+  // propósito (order:1, empuja pillIcons/reset-all/copy-css un lugar). Oculto
+  // por completo si no hay helper de modo live disponible (ver
+  // updateLiveActionsVisibility) — no solo deshabilitado.
+  var pillLiveBtn = document.createElement('button');
+  pillLiveBtn.className = 'tool-icon tool-icon-live';
+  pillLiveBtn.textContent = '✨';
+  pillLiveBtn.title = tr('pillLiveBtnTitle');
+  pillLiveBtn.style.order = '1';
+  pillLiveBtn.style.display = 'none';
+  addHotkeyBadge(pillLiveBtn, 'A');
+  // Contador de cambios hechos por Asistencia (ver countClaudeOverrides),
+  // abajo a la derecha — a propósito NO es el badge de atajo (ese va arriba
+  // a la derecha y solo se ve con Shift); este es siempre visible mientras
+  // haya al menos 1 cambio de Claude pendiente, para verlo de un vistazo
+  // sin tener que abrir el panel.
+  var pillLiveBadge = document.createElement('span');
+  pillLiveBadge.className = 'pill-live-badge';
+  pillLiveBadge.style.display = 'none';
+  pillLiveBtn.appendChild(pillLiveBadge);
+  pillLiveBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleLiveTool(); });
+  pill.appendChild(pillLiveBtn);
   // Indicador + reset global de "Vista previa de estilos" (ver más abajo,
   // junto a countAllOverrides/clearAllOverrides): solo visible cuando hay
   // al menos un estilo cambiado en algún elemento de la página, sin
@@ -1577,7 +2826,7 @@
   pillResetAllCount.textContent = '0';
   pillResetAllBtn.appendChild(pillResetAllIcon);
   pillResetAllBtn.appendChild(pillResetAllCount);
-  pillResetAllBtn.style.order = '2';
+  pillResetAllBtn.style.order = '3';
   pill.appendChild(pillResetAllBtn);
   addHotkeyBadge(pillResetAllBtn, 'R');
   pillResetAllBtn.addEventListener('click', function (e) {
@@ -1596,7 +2845,7 @@
   var pillCopyCssLabel = document.createElement('span');
   pillCopyCssLabel.textContent = '📄';
   pillCopyCssBtn.appendChild(pillCopyCssLabel);
-  pillCopyCssBtn.style.order = '3';
+  pillCopyCssBtn.style.order = '4';
   pill.appendChild(pillCopyCssBtn);
   addHotkeyBadge(pillCopyCssBtn, 'G');
   pillCopyCssBtn.addEventListener('click', function (e) {
@@ -1609,7 +2858,7 @@
   // etc.) ya están definidas — el orden de declaración no importa acá porque
   // son "function" hoisteadas, pero el armado del DOM sí necesita ese punto.
   var pillIcons = document.createElement('div');
-  pillIcons.style.cssText = 'display:flex;flex-direction:column;gap:4px;order:1;align-items:center';
+  pillIcons.style.cssText = 'display:flex;flex-direction:column;gap:4px;order:2;align-items:center';
   // Cada ícono individual ya hace stopPropagation() en su propio listener,
   // pero el HUECO/fondo entre íconos es del propio pillIcons — sin este
   // listener, un clic ahí (sin tocar ningún botón) burbujeaba hasta el
@@ -1628,6 +2877,54 @@
   var pinnedInfo = document.createElement('div');
   pinnedInfo.className = 'pinned';
   pinnedInfo.textContent = tr('clickToInspect');
+  pinnedInfo.title = tr('selectElement');
+  // Clic acá = volver a fijar el mismo elemento (pin() de nuevo) — sobre
+  // todo para el scroll-into-view automático que ya tiene pin(): si el
+  // usuario se scrolleó lejos del elemento fijado, esto lo trae de vuelta
+  // a la vista sin tener que ubicarlo a mano.
+  pinnedInfo.addEventListener('click', function () { if (pinnedEl) pin(pinnedEl); });
+
+  // Modo live (ver lens-sk-live-server.js): YA NO es un grupo siempre visible
+  // acá — es contenido del panel de la vista "live" (ver renderLive), igual
+  // que Layout/Estilos. Se crean los botones una sola vez (persistentes) y
+  // se appendean adentro de `panel` solo cuando activeTool === 'live'.
+  var liveActionsRow = document.createElement('div');
+  liveActionsRow.className = 'live-actions';
+  function makeLiveBtn(icon, labelKey, titleKey) {
+    var b = document.createElement('button');
+    b.className = 'live-btn';
+    var ic = document.createElement('span');
+    ic.className = 'live-btn-ic';
+    ic.textContent = icon;
+    var lbl = document.createElement('span');
+    lbl.textContent = tr(labelKey);
+    b.appendChild(ic);
+    b.appendChild(lbl);
+    b.title = tr(titleKey);
+    return b;
+  }
+  var liveCommitBtn = makeLiveBtn('🤖', 'liveCommitBtnLabel', 'liveCommitBtnTitle');
+  var liveLocateBtn = makeLiveBtn('📍', 'liveLocateBtnLabel', 'liveLocateBtnTitle');
+  // Ayuda específica de Asistencia Claude (ver getLiveHelpContentHTML) — va
+  // en la misma fila que Aplicar/Código, al lado de este último. Mismo
+  // `makeLiveBtn` que los otros dos para que las 3 queden parejas. Íconos
+  // Aplicar/Ayuda intercambiados a pedido del usuario respecto al par
+  // 📤/🤖 original.
+  var liveHelpBtn = makeLiveBtn('❓', 'liveHelpBtnLabel', 'liveHelpBtnTitle');
+  // Mismo badge de atajo (cuadro negro/letra amarilla, con Shift) que el
+  // resto de la pastilla — Aplicar/Código son los atajos T/C reusados (ver
+  // syncRepurposedPillIcons), y Ayuda tiene el suyo propio (liveHelpShortcut,
+  // solo activo con esta vista abierta) para que no desentone al lado de
+  // los otros dos.
+  addHotkeyBadge(liveCommitBtn, 'E');
+  addHotkeyBadge(liveLocateBtn, 'C');
+  addHotkeyBadge(liveHelpBtn, '?');
+  liveActionsRow.appendChild(liveCommitBtn);
+  liveActionsRow.appendChild(liveLocateBtn);
+  liveActionsRow.appendChild(liveHelpBtn);
+  liveCommitBtn.addEventListener('click', function () { doLiveCommit(liveCommitBtn); });
+  liveLocateBtn.addEventListener('click', function () { doLiveLocate(liveLocateBtn); });
+  liveHelpBtn.addEventListener('click', function () { openHelp(getLiveHelpContentHTML); });
 
   var toolsRow = document.createElement('div');
   toolsRow.className = 'row';
@@ -1703,6 +3000,7 @@
     if (!classes) { flashButtonFeedback(btn, '⚠️'); return; }
     copyText(classes);
     flashButtonFeedback(btn, '✅');
+    showToast(tr('toastClassesCopied'), 'success');
   }
   function doCopyComponent(btn) {
     if (!pinnedEl) { flashButtonFeedback(btn, '⚠️'); return; }
@@ -1711,6 +3009,7 @@
       ? section.className.trim().split(/\s+/)[0] : '';
     if (!rootClass) { flashButtonFeedback(btn, '⚠️'); return; }
     copyText(rootClass);
+    showToast(tr('toastComponentClassCopied'), 'success');
     flashButtonFeedback(btn, '✅');
   }
 
@@ -1747,6 +3046,14 @@
   addHotkeyBadge(pillCopyComponentBtn, 'T');
   addHotkeyBadge(pillCaptureBtn, 'P');
   addHotkeyBadge(pillCloneBtn, 'D');
+  // Contador de TODOS los cambios pendientes (manuales + de Claude, ver
+  // countAllOverrides) sobre este ícono cuando se repurpone como "Aplicar
+  // todos" (ver syncRepurposedPillIcons/updateOverrideIndicator) — mismo
+  // patrón visual que pillLiveBadge (✨), reusando la misma clase.
+  var pillCommitAllBadge = document.createElement('span');
+  pillCommitAllBadge.className = 'pill-live-badge pill-live-badge-green';
+  pillCommitAllBadge.style.display = 'none';
+  pillCopyComponentBtn.appendChild(pillCommitAllBadge);
 
   function onPillIcon(btn, action) {
     btn.addEventListener('click', function (e) {
@@ -1773,8 +3080,16 @@
     if (!pinnedEl) { flashButtonFeedback(pillTreeBtn, '⚠️'); return; }
     openTreeModal(pinnedEl);
   });
-  onPillIcon(pillCopyClassesBtn, function () { doCopyClasses(pillCopyClassesBtn); });
-  onPillIcon(pillCopyComponentBtn, function () { doCopyComponent(pillCopyComponentBtn); });
+  // Reusados como Código/Aplicar cuando hay Claude escuchando — ver
+  // syncRepurposedPillIcons(). Sin eso disponible, comportamiento original.
+  onPillIcon(pillCopyClassesBtn, function () {
+    if (liveHelperAvailable) doLiveLocate(pillCopyClassesBtn);
+    else doCopyClasses(pillCopyClassesBtn);
+  });
+  onPillIcon(pillCopyComponentBtn, function () {
+    if (liveHelperAvailable) doLiveCommitAll();
+    else doCopyComponent(pillCopyComponentBtn);
+  });
   onPillIcon(pillCaptureBtn, function () { if (pinnedEl) doCapture(pinnedEl, pillCaptureBtn); else flashButtonFeedback(pillCaptureBtn, '⚠️'); });
   onPillIcon(pillCloneBtn, function () { if (pinnedEl) addCloneForPinned(); else flashButtonFeedback(pillCloneBtn, '⚠️'); });
 
@@ -1784,14 +3099,14 @@
   // código (onPillIcon, addHotkeyBadge...) sigue referenciando cada botón
   // por nombre, sin depender de en qué posición del array quedó.
   pillInspectBtn.style.order = '1';
-  pillLayoutBtn.style.order = '2';
-  pillStylesBtn.style.order = '3';
+  pillStylesBtn.style.order = '2';
+  pillLayoutBtn.style.order = '3';
   pillTreeBtn.style.order = '4';
   pillCopyClassesBtn.style.order = '5';
   pillCopyComponentBtn.style.order = '6';
   pillCaptureBtn.style.order = '7';
   pillCloneBtn.style.order = '8';
-  [pillInspectBtn, pillLayoutBtn, pillStylesBtn, pillTreeBtn, pillCopyClassesBtn, pillCopyComponentBtn, pillCaptureBtn, pillCloneBtn]
+  [pillInspectBtn, pillStylesBtn, pillLayoutBtn, pillTreeBtn, pillCopyClassesBtn, pillCopyComponentBtn, pillCaptureBtn, pillCloneBtn]
     .forEach(function (b) { pillIcons.appendChild(b); });
 
   // Flechita al final de la píldora (no es un ícono más de la fila, va afuera
@@ -1880,15 +3195,29 @@
     toggle.appendChild(sw);
     var textNode = document.createTextNode(tr(labelKey));
     toggle.appendChild(textNode);
-    return { toggle: toggle, input: input, textNode: textNode };
+    return { toggle: toggle, input: input, textNode: textNode, switchEl: sw };
   }
   var layoutDisplayToggle = makeMiniToggle('layoutShowDisplayLabel');
   var layoutPositionToggle = makeMiniToggle('layoutShowPositionLabel');
   var layoutOutlineToggle = makeMiniToggle('layoutShowOutlineLabel');
+  // Atajo propio para cada switch (Y/N/O — D y P ya estaban tomados por
+  // Duplicar/Captura, así que Display y Position no pudieron usar su propia
+  // inicial; Delineado sí, con su nombre en inglés, Outline). Mismo badge
+  // negro/amarillo que el resto (ver addHotkeyBadge) — siempre visible acá
+  // (.layout-view-row .hotkey-badge, no depende de Shift/Inspección) porque
+  // esta fila vive en el panel, no en la pastilla. Anclado en el propio
+  // switchEl (el control), no en `.toggle` (fila completa switch+texto) —
+  // si no, el badge (position:absolute;top;right, ver CSS) queda pegado a
+  // la esquina de toda la fila, es decir sobre la letra de la etiqueta, no
+  // sobre el control que el atajo realmente activa.
+  addHotkeyBadge(layoutDisplayToggle.switchEl, 'Y');
+  addHotkeyBadge(layoutPositionToggle.switchEl, 'N');
+  addHotkeyBadge(layoutOutlineToggle.switchEl, 'O');
   var layoutDisplayInput = layoutDisplayToggle.input;
   var layoutPositionInput = layoutPositionToggle.input;
   var layoutOutlineInput = layoutOutlineToggle.input;
   var layoutViewRow = document.createElement('div');
+  layoutViewRow.className = 'layout-view-row';
   layoutViewRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #1f2937;';
   layoutViewRow.appendChild(layoutDisplayToggle.toggle);
   layoutViewRow.appendChild(layoutPositionToggle.toggle);
@@ -1917,6 +3246,27 @@
   layoutDisplayInput.addEventListener('change', onLayoutViewToggle);
   layoutPositionInput.addEventListener('change', onLayoutViewToggle);
   layoutOutlineInput.addEventListener('change', onLayoutViewToggle);
+  // Atajos de teclado para los 3 switches — solo activos con la vista
+  // Layout abierta (mismo criterio que liveCommitSelectedShortcut/
+  // liveHelpShortcut con 'live'). Cada uno invierte el checkbox y reusa
+  // onLayoutViewToggle tal cual (pasándole un objeto con "target", lo único
+  // que esa función lee) — así la regla de "al menos uno activo" y el
+  // traspaso Display↔Position quedan en un solo lugar, nunca duplicados.
+  function toggleLayoutDisplayShortcut() {
+    if (activeTool !== 'layout') return;
+    layoutDisplayInput.checked = !layoutDisplayInput.checked;
+    onLayoutViewToggle({ target: layoutDisplayInput });
+  }
+  function toggleLayoutPositionShortcut() {
+    if (activeTool !== 'layout') return;
+    layoutPositionInput.checked = !layoutPositionInput.checked;
+    onLayoutViewToggle({ target: layoutPositionInput });
+  }
+  function toggleLayoutOutlineShortcut() {
+    if (activeTool !== 'layout') return;
+    layoutOutlineInput.checked = !layoutOutlineInput.checked;
+    onLayoutViewToggle({ target: layoutOutlineInput });
+  }
 
   // Selector de idioma ES/EN: dos botones chicos (no <select> nativo — mismo
   // motivo que el dropdown propio de dirección de breakpoints más abajo, un
@@ -1976,11 +3326,25 @@
     pillLayoutBtn.title = tr('shortcutLayout');
     pillStylesBtn.title = tr('shortcutStyles');
     pillTreeBtn.title = tr('treeShortcutTitle');
-    pillCopyClassesBtn.title = tr('shortcutCopyClasses');
-    pillCopyComponentBtn.title = tr('shortcutCopyComponent');
+    syncRepurposedPillIcons(); // pisa el title de estos 2 con el texto correcto (reusado o no)
     pillCaptureBtn.title = tr('shortcutCapture');
     hideArrowBtn.title = tr('hideBar');
     restoreBtn.title = tr('showBar');
+    liveCommitBtn.title = tr('liveCommitBtnTitle');
+    liveCommitBtn.lastChild.textContent = tr('liveCommitBtnLabel');
+    liveLocateBtn.title = tr('liveLocateBtnTitle');
+    liveLocateBtn.lastChild.textContent = tr('liveLocateBtnLabel');
+    pillLiveBtn.title = tr('pillLiveBtnTitle');
+    liveTextarea.placeholder = tr('liveRequestPlaceholder');
+    liveScreenshotLabel.textContent = tr('liveRequestAttachScreenshot');
+    liveCancelBtn.textContent = tr('liveRequestCancel');
+    liveSendBtn.textContent = tr('liveRequestSend');
+    liveHelpBtn.title = tr('liveHelpBtnTitle');
+    liveHelpBtn.lastChild.textContent = tr('liveHelpBtnLabel');
+    liveHistoryTitle.textContent = tr('liveHistoryTitle');
+    liveCommitAllBtn.textContent = tr('liveCommitAllBtnLabel');
+    liveCommitAllBtn.title = tr('liveCommitAllBtnTitle');
+    renderLastLiveResult();
     helpBtn.textContent = tr('helpBtnLabel');
     if (buttons.contrast) buttons.contrast.textContent = tr('contrastTab');
     if (buttons.a11y) buttons.a11y.textContent = tr('a11yTab');
@@ -1994,8 +3358,8 @@
     bpTitle.textContent = tr('bpTitle');
     bpCloseBtn.title = tr('close');
     if (helpHost.style.display === 'block') {
-      helpContent.innerHTML = getHelpContentHTML();
-      helpContent.appendChild(buildCreditsSection());
+      helpContent.innerHTML = activeHelpContentGetter();
+      if (activeHelpContentGetter === getHelpContentHTML) helpContent.appendChild(buildCreditsSection());
     }
     if (bpHost.style.display === 'block') renderBpModal();
     if (treeHost.style.display === 'block' && currentTreeRootEl) openTreeModal(currentTreeRootEl);
@@ -2172,6 +3536,345 @@
   badge.setAttribute('data-lens-sk-own', '1');
   document.documentElement.appendChild(badge);
 
+  // Toasts de "esto pasó" (copiar, capturar, aplicar/localizar en modo
+  // live...) — arriba a la IZQUIERDA a propósito: `badge` (indicador de
+  // breakpoint) ya vive arriba a la derecha, así nunca se pisan. DOM real
+  // (no shadow root: los overlays de esta herramienta siempre van afuera,
+  // ver hoverOutline/badge/etc.), para que se vea por encima de la página.
+  var toastRoot = document.createElement('div');
+  toastRoot.setAttribute('data-lens-sk-own', '1');
+  toastRoot.style.cssText = 'position:fixed;top:12px;left:12px;z-index:2147483647;display:flex;flex-direction:column;gap:6px;pointer-events:none;font-family:ui-sans-serif,system-ui,sans-serif;';
+  document.documentElement.appendChild(toastRoot);
+  var TOAST_PALETTE = {
+    success: { bg: '#111827', border: '#374151' },
+    error: { bg: '#7f1d1d', border: '#ef4444' },
+    warn: { bg: '#78350f', border: '#f59e0b' }
+  };
+  // "ms": duración antes de empezar a desvanecer — default 2200 (toasts de
+  // siempre). Los de "terminó un pedido live" usan una duración mayor
+  // (LIVE_TOAST_DURATION_MS) a propósito: el usuario puede estar haciendo
+  // otra cosa mientras Claude trabaja (no bloquea nada), así que el toast
+  // final tiene que durar lo suficiente para que lo alcance a ver aunque no
+  // esté mirando el panel en ese momento.
+  function showToast(message, kind, ms) {
+    var palette = TOAST_PALETTE[kind] || TOAST_PALETTE.success;
+    var el = document.createElement('div');
+    el.textContent = message;
+    el.style.cssText = 'background:' + palette.bg + ';color:#fff;border:1px solid ' + palette.border + ';border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;transform:translateY(-6px);transition:opacity .18s ease-out,transform .18s ease-out;max-width:280px;';
+    toastRoot.appendChild(el);
+    requestAnimationFrame(function () {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+    setTimeout(function () {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-6px)';
+      setTimeout(function () { el.remove(); }, 200);
+    }, ms || 2200);
+  }
+  var LIVE_TOAST_DURATION_MS = 5000;
+  // Toast con botones clickeables (ej. Editar/Descargar de una captura) —
+  // mismo look que showToast, pero: (a) pointer-events propio (toastRoot es
+  // pointer-events:none para no robarle clics a la página, un toast normal
+  // no lo necesita), y (b) dura más (8s en vez de 2.2s) — un toast de texto
+  // se lee de un vistazo, este pide decidir y clickear.
+  // Toasts con botones actualmente abiertos, en orden — Esc cierra el más
+  // reciente (ver el chequeo en onShortcutKeydown). Un toast normal
+  // (showToast) no entra acá: se va solo enseguida, no hace falta poder
+  // cerrarlo a mano.
+  var activeActionToastDismissers = [];
+  function showActionToast(message, buttons) {
+    var el = document.createElement('div');
+    el.style.cssText = 'position:relative;background:#111827;color:#fff;border:1px solid #374151;border-radius:8px;padding:10px 30px 10px 14px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;transform:translateY(-6px);transition:opacity .18s ease-out,transform .18s ease-out;max-width:280px;pointer-events:auto;';
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.title = tr('close');
+    closeBtn.style.cssText = 'position:absolute;top:6px;right:6px;width:18px;height:18px;line-height:1;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:12px;padding:0;';
+    closeBtn.addEventListener('click', function () { dismiss(); });
+    el.appendChild(closeBtn);
+    var msg = document.createElement('div');
+    msg.textContent = message;
+    msg.style.marginBottom = '8px';
+    el.appendChild(msg);
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;';
+    function dismiss() {
+      clearTimeout(timer);
+      var idx = activeActionToastDismissers.indexOf(dismiss);
+      if (idx !== -1) activeActionToastDismissers.splice(idx, 1);
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-6px)';
+      setTimeout(function () { el.remove(); }, 200);
+    }
+    buttons.forEach(function (b) {
+      var btn = document.createElement('button');
+      btn.textContent = b.label;
+      btn.style.cssText = 'flex:1;background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;';
+      btn.addEventListener('click', function () { dismiss(); b.onClick(); });
+      row.appendChild(btn);
+    });
+    el.appendChild(row);
+    toastRoot.appendChild(el);
+    activeActionToastDismissers.push(dismiss);
+    requestAnimationFrame(function () { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+    var timer = setTimeout(dismiss, 8000);
+  }
+  function downloadDataUrl(dataUrl, filename) {
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    a.click();
+  }
+  function copyImageDataUrlToClipboard(dataUrl) {
+    fetch(dataUrl).then(function (r) { return r.blob(); })
+      .then(function (blob) { return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); })
+      .then(function () { showToast(tr('toastCaptureCopied'), 'success'); })
+      .catch(function () { showToast(tr('toastCaptureFailed'), 'error'); });
+  }
+
+  // ---------------------------------------------------------------------
+  // Editor de imagen simple (zoom + texto/recuadro/flecha) — para dar
+  // indicaciones visuales sobre una captura antes de mandarla (Asistencia
+  // Claude) o para anotar la del botón 📸 antes de copiarla/descargarla.
+  // A propósito NO es una app de gráficos: cada herramienta tiene su color/
+  // grosor/tamaño FIJO, nada elegible — solo tiene que notarse bien qué se
+  // está señalando. Mismo patrón de host aparte que helpHost/treeHost
+  // (shadow root propio, z-index máximo, afuera de la píldora).
+  // ---------------------------------------------------------------------
+  var imgEditorHost = document.createElement('div');
+  imgEditorHost.id = 'claude-inspector-imgeditor-host';
+  imgEditorHost.setAttribute('data-lens-sk-own', '1');
+  imgEditorHost.style.cssText = 'all:initial; position:fixed; inset:0; z-index:2147483647; display:none;';
+  document.documentElement.appendChild(imgEditorHost);
+  var imgEditorRoot = imgEditorHost.attachShadow({ mode: 'open' });
+  var imgEditorStyle = document.createElement('style');
+  imgEditorStyle.textContent = [
+    ':host{all:initial;}',
+    '*{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}',
+    '.ie-root{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;}',
+    '.ie-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#111827;border-bottom:1px solid #1f2937;flex-wrap:wrap;}',
+    '.ie-toolbar button{background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:8px;width:36px;height:36px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}',
+    '.ie-toolbar button.ie-wide{width:auto;padding:0 14px;gap:6px;font-size:13px;font-weight:600;white-space:nowrap;}',
+    '.ie-toolbar button:hover{background:#374151;}',
+    '.ie-toolbar button.active{background:#2563eb;border-color:#2563eb;color:#fff;}',
+    '.ie-toolbar .ie-sep{width:1px;align-self:stretch;background:#374151;margin:0 4px;}',
+    '.ie-toolbar .ie-spacer{flex:1;}',
+    '.ie-canvas-wrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px;}',
+    '.ie-canvas-wrap canvas{background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.5);cursor:crosshair;}',
+  ].join('');
+  imgEditorRoot.appendChild(imgEditorStyle);
+  var imgEditorRootEl = document.createElement('div');
+  imgEditorRootEl.className = 'ie-root';
+  var imgEditorToolbar = document.createElement('div');
+  imgEditorToolbar.className = 'ie-toolbar';
+  var imgEditorCanvasWrap = document.createElement('div');
+  imgEditorCanvasWrap.className = 'ie-canvas-wrap';
+  var imgEditorCanvas = document.createElement('canvas');
+  imgEditorCanvasWrap.appendChild(imgEditorCanvas);
+  imgEditorRootEl.appendChild(imgEditorToolbar);
+  imgEditorRootEl.appendChild(imgEditorCanvasWrap);
+  imgEditorRoot.appendChild(imgEditorRootEl);
+
+  function ieMakeBtn(icon, titleKey, wide) {
+    var b = document.createElement('button');
+    b.textContent = icon;
+    b.title = tr(titleKey);
+    if (wide) b.className = 'ie-wide';
+    return b;
+  }
+  var ieToolRect = ieMakeBtn('▭', 'imgEditorToolRectTitle');
+  var ieToolArrow = ieMakeBtn('➚', 'imgEditorToolArrowTitle');
+  var ieToolPencil = ieMakeBtn('✏️', 'imgEditorToolPencilTitle');
+  var ieToolText = ieMakeBtn('📝', 'imgEditorToolTextTitle');
+  var ieZoomOutBtn = ieMakeBtn('－', 'imgEditorZoomOutTitle');
+  var ieZoomInBtn = ieMakeBtn('＋', 'imgEditorZoomInTitle');
+  var ieUndoBtn = ieMakeBtn('↺', 'imgEditorUndoTitle');
+  var ieDownloadBtn = ieMakeBtn('💾', 'imgEditorDownloadTitle');
+  var ieConfirmBtn = document.createElement('button');
+  ieConfirmBtn.className = 'ie-wide';
+  ieConfirmBtn.style.background = '#166534';
+  ieConfirmBtn.style.borderColor = '#22c55e';
+  var ieCloseBtn = ieMakeBtn('✕', 'close');
+  var ieSep1 = document.createElement('div'); ieSep1.className = 'ie-sep';
+  var ieSep2 = document.createElement('div'); ieSep2.className = 'ie-sep';
+  var ieSpacer = document.createElement('div'); ieSpacer.className = 'ie-spacer';
+  [ieToolRect, ieToolArrow, ieToolPencil, ieToolText, ieSep1, ieZoomOutBtn, ieZoomInBtn, ieUndoBtn, ieSep2, ieSpacer, ieDownloadBtn, ieConfirmBtn, ieCloseBtn]
+    .forEach(function (n) { imgEditorToolbar.appendChild(n); });
+
+  var IE_COLOR = '#ef4444';
+  var IE_LINE_WIDTH = 5;
+  var IE_PENCIL_LINE_WIDTH = 4;
+  var IE_TEXT_BG = 'rgba(0,0,0,.72)';
+  var ieBaseImage = null;
+  var ieHistory = [];
+  var ieActiveTool = 'rect';
+  var ieZoom = 1;
+  var ieDrawing = null;
+  var ieOnConfirm = null;
+
+  function ieDrawArrowShape(ctx, x1, y1, x2, y2) {
+    var headLen = Math.max(14, IE_LINE_WIDTH * 3);
+    var angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+  }
+  function ieDrawAnnotation(ctx, a) {
+    if (a.type === 'rect') {
+      ctx.strokeStyle = IE_COLOR; ctx.lineWidth = IE_LINE_WIDTH;
+      ctx.strokeRect(a.x, a.y, a.w, a.h);
+    } else if (a.type === 'arrow') {
+      ctx.strokeStyle = IE_COLOR; ctx.fillStyle = IE_COLOR; ctx.lineWidth = IE_LINE_WIDTH;
+      ieDrawArrowShape(ctx, a.x1, a.y1, a.x2, a.y2);
+    } else if (a.type === 'pencil') {
+      if (a.points.length < 2) return;
+      ctx.strokeStyle = IE_COLOR; ctx.lineWidth = IE_PENCIL_LINE_WIDTH;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(a.points[0].x, a.points[0].y);
+      a.points.slice(1).forEach(function (p) { ctx.lineTo(p.x, p.y); });
+      ctx.stroke();
+    } else if (a.type === 'text') {
+      var fontSize = Math.max(22, Math.round(imgEditorCanvas.height * 0.03));
+      ctx.font = 'bold ' + fontSize + 'px ui-sans-serif, system-ui, sans-serif';
+      var metrics = ctx.measureText(a.text);
+      var padding = 6;
+      ctx.fillStyle = IE_TEXT_BG;
+      ctx.fillRect(a.x - padding, a.y - fontSize, metrics.width + padding * 2, fontSize + padding * 1.5);
+      ctx.fillStyle = IE_COLOR;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(a.text, a.x, a.y);
+    }
+  }
+  function ieRedraw() {
+    var ctx = imgEditorCanvas.getContext('2d');
+    ctx.clearRect(0, 0, imgEditorCanvas.width, imgEditorCanvas.height);
+    if (ieBaseImage) ctx.drawImage(ieBaseImage, 0, 0);
+    ieHistory.forEach(function (a) { ieDrawAnnotation(ctx, a); });
+  }
+  function ieApplyZoom() {
+    imgEditorCanvas.style.width = (imgEditorCanvas.width * ieZoom) + 'px';
+    imgEditorCanvas.style.height = (imgEditorCanvas.height * ieZoom) + 'px';
+  }
+  function ieSelectTool(tool) {
+    ieActiveTool = tool;
+    [ieToolRect, ieToolArrow, ieToolPencil, ieToolText].forEach(function (b) { b.classList.remove('active'); });
+    ({ rect: ieToolRect, arrow: ieToolArrow, pencil: ieToolPencil, text: ieToolText })[tool].classList.add('active');
+  }
+  ieToolRect.addEventListener('click', function () { ieSelectTool('rect'); });
+  ieToolArrow.addEventListener('click', function () { ieSelectTool('arrow'); });
+  ieToolPencil.addEventListener('click', function () { ieSelectTool('pencil'); });
+  ieToolText.addEventListener('click', function () { ieSelectTool('text'); });
+  ieZoomInBtn.addEventListener('click', function () { ieZoom = Math.min(ieZoom + 0.25, 3); ieApplyZoom(); });
+  ieZoomOutBtn.addEventListener('click', function () { ieZoom = Math.max(ieZoom - 0.25, 0.25); ieApplyZoom(); });
+  ieUndoBtn.addEventListener('click', function () { ieHistory.pop(); ieRedraw(); });
+  ieDownloadBtn.addEventListener('click', function () { downloadDataUrl(imgEditorCanvas.toDataURL('image/png'), 'captura-' + Date.now() + '.png'); });
+
+  function ieCanvasPoint(e) {
+    var rect = imgEditorCanvas.getBoundingClientRect();
+    var scaleX = imgEditorCanvas.width / rect.width;
+    var scaleY = imgEditorCanvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+  imgEditorCanvas.addEventListener('pointerdown', function (e) {
+    if (ieActiveTool === 'text') {
+      var p = ieCanvasPoint(e);
+      var text = window.prompt(tr('imgEditorTextPrompt'), '');
+      if (text) { ieHistory.push({ type: 'text', x: p.x, y: p.y, text: text }); ieRedraw(); }
+      return;
+    }
+    var start = ieCanvasPoint(e);
+    // Lápiz junta puntos del trazo (points[]), no un par x1/y1→x2/y2 fijo
+    // como rect/flecha — cada pointermove agrega un punto nuevo en vez de
+    // mover el mismo par.
+    ieDrawing = ieActiveTool === 'pencil'
+      ? { type: 'pencil', points: [start] }
+      : { type: ieActiveTool, x1: start.x, y1: start.y, x2: start.x, y2: start.y };
+    try { imgEditorCanvas.setPointerCapture(e.pointerId); } catch (err) { /* algunos dispositivos/eventos sintéticos no tienen un pointer activo para capturar — no crítico, el dibujo sigue andando igual */ }
+  });
+  imgEditorCanvas.addEventListener('pointermove', function (e) {
+    if (!ieDrawing) return;
+    var p = ieCanvasPoint(e);
+    var ctx = imgEditorCanvas.getContext('2d');
+    if (ieDrawing.type === 'pencil') {
+      // Sin ieRedraw() en cada punto (a diferencia de rect/flecha) — un
+      // trazo libre puede tener muchísimos puntos, y redibujar TODO el
+      // historial en cada pointermove se pondría lento; en vez de eso,
+      // solo se traza el segmento nuevo sobre lo que ya está pintado.
+      var last = ieDrawing.points[ieDrawing.points.length - 1];
+      ctx.strokeStyle = IE_COLOR; ctx.lineWidth = IE_PENCIL_LINE_WIDTH;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ieDrawing.points.push(p);
+      return;
+    }
+    ieDrawing.x2 = p.x; ieDrawing.y2 = p.y;
+    ieRedraw();
+    if (ieDrawing.type === 'rect') {
+      ctx.strokeStyle = IE_COLOR; ctx.lineWidth = IE_LINE_WIDTH;
+      ctx.strokeRect(Math.min(ieDrawing.x1, ieDrawing.x2), Math.min(ieDrawing.y1, ieDrawing.y2), Math.abs(ieDrawing.x2 - ieDrawing.x1), Math.abs(ieDrawing.y2 - ieDrawing.y1));
+    } else {
+      ctx.strokeStyle = IE_COLOR; ctx.fillStyle = IE_COLOR; ctx.lineWidth = IE_LINE_WIDTH;
+      ieDrawArrowShape(ctx, ieDrawing.x1, ieDrawing.y1, ieDrawing.x2, ieDrawing.y2);
+    }
+  });
+  imgEditorCanvas.addEventListener('pointerup', function () {
+    if (!ieDrawing) return;
+    if (ieDrawing.type === 'rect') {
+      ieHistory.push({ type: 'rect', x: Math.min(ieDrawing.x1, ieDrawing.x2), y: Math.min(ieDrawing.y1, ieDrawing.y2), w: Math.abs(ieDrawing.x2 - ieDrawing.x1), h: Math.abs(ieDrawing.y2 - ieDrawing.y1) });
+    } else if (ieDrawing.type === 'arrow') {
+      ieHistory.push({ type: 'arrow', x1: ieDrawing.x1, y1: ieDrawing.y1, x2: ieDrawing.x2, y2: ieDrawing.y2 });
+    } else if (ieDrawing.type === 'pencil' && ieDrawing.points.length > 1) {
+      ieHistory.push({ type: 'pencil', points: ieDrawing.points });
+    }
+    ieDrawing = null;
+    ieRedraw();
+  });
+
+  function closeImageEditor() {
+    imgEditorHost.style.display = 'none';
+    ieBaseImage = null; ieHistory = []; ieDrawing = null; ieOnConfirm = null;
+  }
+  ieCloseBtn.addEventListener('click', closeImageEditor);
+  ieConfirmBtn.addEventListener('click', function () {
+    var dataUrl = imgEditorCanvas.toDataURL('image/png');
+    var cb = ieOnConfirm;
+    closeImageEditor();
+    if (cb) cb(dataUrl);
+  });
+  // dataUrl: captura a editar. opts.confirmLabelKey: texto del botón de
+  // confirmar (varía según de dónde se abrió — "usar esta imagen" para
+  // Asistencia Claude, "copiar imagen" para el botón 📸). opts.onConfirm:
+  // recibe la imagen YA con las anotaciones dibujadas encima.
+  function openImageEditor(dataUrl, opts) {
+    opts = opts || {};
+    ieOnConfirm = opts.onConfirm || null;
+    ieConfirmBtn.textContent = '✅ ' + tr(opts.confirmLabelKey || 'imgEditorConfirmUse');
+    ieHistory = [];
+    ieZoom = 1;
+    ieSelectTool('rect');
+    var img = new Image();
+    img.onload = function () {
+      ieBaseImage = img;
+      imgEditorCanvas.width = img.naturalWidth;
+      imgEditorCanvas.height = img.naturalHeight;
+      ieApplyZoom();
+      ieRedraw();
+    };
+    img.src = dataUrl;
+    imgEditorHost.style.display = 'block';
+  }
+
   // Marca visualmente TODOS los elementos con vista previa activa (no solo
   // el fijado) mientras Inspección está encendida — para ubicar cambios
   // sutiles (ej. un color muy parecido al original) sin ir clic por clic.
@@ -2201,11 +3904,17 @@
       // events:auto pisa el "none" del contenedor (modifiedMarkersRoot es
       // puramente decorativo por default) solo para este punto — es un
       // botón real, no un overlay más.
+      // Violeta (en vez de ámbar) si ALGUNA de las propiedades de este
+      // selector vino de una Sugerencia de Claude — mismo criterio que
+      // .row-copy.overridden-claude, para distinguir de un vistazo qué tocó
+      // la IA de lo que tocó el humano a mano.
+      var byClaude = Object.keys(page[selector]).some(function (p) { return page[selector][p].source === 'claude'; });
+      var dotColor = byClaude ? '#8b5cf6' : '#f59e0b';
       // Esquina superior-izquierda, mismo criterio que layPositionCornerLabel
       // ("toca la línea, crece hacia adentro"): queda DENTRO del elemento en
       // vez de centrado sobre el punto de la esquina, así nunca se sale del
       // viewport aunque el elemento esté pegado al borde de la pantalla.
-      dot.style.cssText = 'position:absolute;top:' + rect.top + 'px;left:' + rect.left + 'px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:999px;background:#f59e0b;color:#111827;font-size:9px;box-shadow:0 0 0 2px #111827,0 0 0 3px #f59e0b,0 0 8px 2px rgba(245,158,11,.65);pointer-events:auto;cursor:pointer;';
+      dot.style.cssText = 'position:absolute;top:' + rect.top + 'px;left:' + rect.left + 'px;width:16px;height:16px;line-height:16px;text-align:center;border-radius:999px;background:' + dotColor + ';color:#111827;font-size:9px;box-shadow:0 0 0 2px #111827,0 0 0 3px ' + dotColor + ',0 0 8px 2px ' + (byClaude ? 'rgba(139,92,246,.65)' : 'rgba(245,158,11,.65)') + ';pointer-events:auto;cursor:pointer;';
       dot.addEventListener('click', function (e) {
         e.stopPropagation();
         pin(el);
@@ -2262,6 +3971,28 @@
     }
     return parts.join(' > ');
   }
+  // Respaldo de cssSelectorFor para el historial: mismo camino tag+nth-of-type
+  // desde la raíz, pero SIN clases — si un override cambia la clase de un
+  // elemento (ej. swap de variante bg-*), el selector "bonito" (con clases)
+  // deja de matchear ese elemento después de aplicarlo; este no depende de
+  // clases, así que sigue encontrándolo mientras la estructura no cambie.
+  function cssSelectorForStructural(el) {
+    if (el.id) return '#' + el.id;
+    var parts = [];
+    var node = el;
+    while (node && node.nodeType === 1) {
+      if (node.id) { parts.unshift('#' + node.id); break; }
+      var part = node.tagName.toLowerCase();
+      var parent = node.parentElement;
+      if (parent) {
+        var siblings = Array.prototype.filter.call(parent.children, function (s) { return s.tagName === node.tagName; });
+        if (siblings.length > 1) part += ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')';
+      }
+      parts.unshift(part);
+      node = node.parentElement;
+    }
+    return parts.join(' > ');
+  }
 
   // ---------------------------------------------------------------------
   // Vista previa de estilos: overrides guardados en localStorage, por
@@ -2291,10 +4022,139 @@
       return matches.length === 1 ? matches[0] : null;
     } catch (e) { return null; }
   }
+  // Re-pin desde el historial: probá el selector "bonito" (con clases)
+  // primero — si un override de tipo "class" ya se aplicó (swap de variante
+  // bg-*), ese selector puede no matchear más; el estructural (sin clases,
+  // ver cssSelectorForStructural) es el respaldo.
+  function pinFromHistorySelectors(selector, structuralSelector) {
+    var el = (selector && uniqueElementFor(selector)) || (structuralSelector && uniqueElementFor(structuralSelector));
+    if (el) pin(el);
+    return el;
+  }
   function getElementOverrides(selector) {
     var store = getOverridesStore();
     var page = store[pageOverrideKey()];
     return (page && page[selector]) || {};
+  }
+  // Todo override pendiente que caiga DENTRO del elemento fijado (hijos,
+  // nietos, etc.), sea de origen "claude" (una sugerencia previa) o
+  // "manual" (a mano, incluido el editor de árbol HTML) — para que un
+  // pedido sobre el padre le llegue a Claude con el contexto completo del
+  // subárbol, no solo el elemento pineado en aislamiento (pedido explícito
+  // del usuario). El propio elemento fijado NO se incluye acá — sus datos
+  // ya van aparte en el payload (selector/classes/overrides).
+  function collectDescendantOverrides(el) {
+    var store = getOverridesStore();
+    var page = store[pageOverrideKey()] || {};
+    var result = [];
+    Object.keys(page).forEach(function (selector) {
+      var candidate = uniqueElementFor(selector);
+      if (!candidate || candidate === el || !el.contains(candidate)) return;
+      result.push({ selector: selector, props: page[selector] });
+    });
+    return result;
+  }
+  // ---------------------------------------------------------------------
+  // Historial de Asistencia Claude: guarda CADA respuesta (Sugerir, o un
+  // "Aplicar todos los cambios") — no solo el resultado sobre el elemento
+  // pineado en el momento, para poder repasar después qué pidió/contestó
+  // Claude en toda la sesión. Mismo patrón que getOverridesStore (por
+  // página, localStorage) — se acumula, con un tope razonable para no
+  // crecer sin límite.
+  var LIVE_HISTORY_STORAGE_KEY = '__claudeInspectorLiveHistory';
+  var LIVE_HISTORY_MAX = 50;
+  function getLiveHistoryStore() {
+    try {
+      var raw = localStorage.getItem(LIVE_HISTORY_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function setLiveHistoryStore(store) {
+    try { localStorage.setItem(LIVE_HISTORY_STORAGE_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+  function getLiveHistory() {
+    var store = getLiveHistoryStore();
+    return store[pageOverrideKey()] || [];
+  }
+  // Más reciente primero — para leer de arriba hacia abajo sin tener que
+  // invertir nada en el render.
+  function addLiveHistoryEntry(entry) {
+    var store = getLiveHistoryStore();
+    var list = store[pageOverrideKey()] || (store[pageOverrideKey()] = []);
+    list.unshift(entry);
+    if (list.length > LIVE_HISTORY_MAX) list.length = LIVE_HISTORY_MAX;
+    setLiveHistoryStore(store);
+    renderLastLiveResult();
+  }
+  // Pinta la entrada MÁS RECIENTE del historial en liveLastResultBox (ver
+  // más arriba) — se llama acá para que CUALQUIER forma de agregar una
+  // entrada (suggest u commit-all, ok o error) la mantenga al día sola,
+  // sin tener que acordarse de actualizarla en cada lugar por separado.
+  // Reusa los mismos textos de los toasts como default (nada nuevo que
+  // traducir) cuando no hay `note` propio.
+  // Retirada de uso real: "Tu respuesta" (liveStatus) ya es el ÚNICO canal
+  // de texto de Claude, para cualquier tipo de pedido (ver doLiveCommit/
+  // doLiveCommitAll/liveSendBtn) — tener esta caja aparte, en una posición
+  // parecida, generaba justo la confusión de "dos lugares distintos" que el
+  // usuario reportó. Se deja como no-op (en vez de borrar el elemento y
+  // todos sus call sites) para no arriesgar romper nada; siempre queda
+  // vacía/oculta.
+  // "Última respuesta final" — a diferencia de liveStatus (línea de "en
+  // curso", se vacía sola al terminar el pedido, ver stopLiveProgressPoll),
+  // esta caja es donde queda el resultado: encabezado corto según qué pasó
+  // + el detalle de Claude (`note`) debajo. Solo cubre 'suggest' y
+  // 'commit-all' (los dos tipos que sí quedan en el HISTORIAL, ver
+  // addLiveHistoryEntry) — 'commit' individual no pasa por acá, se resuelve
+  // directo en doLiveCommit porque no genera entrada propia de historial.
+  // Regla de oro: el encabezado (qué pasó) va SIEMPRE en liveStatus, el
+  // detalle (la nota de Claude, si hay) va SIEMPRE en liveLastResultBox —
+  // nunca mezclados en un mismo elemento, y el encabezado nunca queda vacío
+  // cuando hay una respuesta final.
+  function renderLastLiveResult() {
+    var history = getLiveHistory();
+    var entry = history[0];
+    if (!entry) { liveLastResultBox.textContent = ''; liveLastResultBox.style.display = 'none'; return; }
+    var header = !entry.ok
+      ? tr('liveErrorLabel')
+      : (entry.type === 'commit-all' ? tr('liveCommitAllOkLabel').replace('{n}', (entry.files || []).length) : tr('liveResultLabel'));
+    liveStatus.textContent = header;
+    // Este elemento NUNCA queda vacío en una respuesta final — si no llegó
+    // `note` (se supone que siempre debería, ver skill lens-sk-live-listen),
+    // un texto de respaldo genérico es mejor que dejarlo en blanco.
+    liveLastResultBox.textContent = entry.note || tr(entry.ok ? 'liveNoteFallbackOk' : 'liveNoteFallbackFail');
+    liveLastResultBox.style.display = 'block';
+  }
+  renderLastLiveResult();
+  // Si una sugerencia nunca se aplicó a los archivos reales (se descartó
+  // con "Restablecer") no tiene sentido que su entrada quede en el
+  // historial como si algo hubiera pasado de verdad — se poda junto con el
+  // override (ver clearElementOverrides). Las entradas 'commit-all' NUNCA
+  // se tocan acá: representan un cambio ya aplicado de verdad a un
+  // archivo, restablecer la vista previa no deshace eso.
+  function removeLiveHistoryEntriesForSelector(selector) {
+    var store = getLiveHistoryStore();
+    var list = store[pageOverrideKey()];
+    if (!list || !list.length) return;
+    var filtered = list.filter(function (entry) { return !(entry.type === 'suggest' && entry.selector === selector); });
+    if (filtered.length !== list.length) {
+      store[pageOverrideKey()] = filtered;
+      setLiveHistoryStore(store);
+    }
+  }
+  // Se llama cuando un override de este selector SÍ llegó a aplicarse de
+  // verdad a un archivo (doLiveCommit individual, o cada archivo devuelto
+  // por doLiveCommitAll) — marca la(s) entrada(s) 'suggest' correspondiente
+  // para que "Restablecer todo" (ver el barrido en clearAllOverrides) sepa
+  // que esta SÍ representa un cambio real y no la borre.
+  function markLiveHistoryEntriesApplied(selector) {
+    var store = getLiveHistoryStore();
+    var list = store[pageOverrideKey()];
+    if (!list || !list.length) return;
+    var changed = false;
+    list.forEach(function (entry) {
+      if (entry.type === 'suggest' && entry.selector === selector && !entry.applied) { entry.applied = true; changed = true; }
+    });
+    if (changed) setLiveHistoryStore(store);
   }
   // "prop" no siempre es una propiedad CSS real: 'class' pisa el atributo
   // class completo, y 'text:N' pisa el N-ésimo nodo de texto directo del
@@ -2311,6 +4171,58 @@
     }
     el.style.setProperty(prop, value);
   }
+  // Chequeo genérico (cualquier proyecto, cualquier build de CSS): ¿la
+  // clase nueva tiene ALGÚN efecto visual real? No depende de rutas ni
+  // nombres de archivo del proyecto — prueba contra el CSS que el
+  // navegador YA tiene cargado, sea cual sea el sistema de build (Tailwind
+  // v3/v4, Sass, CSS plano, etc.). Un elemento de prueba fuera de pantalla
+  // se compara consigo mismo antes/después de la clase; si ningún valor
+  // computado cambia, la clase no tiene ninguna regla real detrás (ej. una
+  // utility de Tailwind nunca escaneada/compilada en el build actual).
+  function classChangeHasVisibleEffect(tagName, oldClassName, newClassName) {
+    var probe = document.createElement(tagName || 'div');
+    probe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
+    document.body.appendChild(probe);
+    try {
+      probe.className = oldClassName || '';
+      var before = getComputedStyle(probe);
+      var beforeSnapshot = {};
+      for (var i = 0; i < before.length; i++) { var name = before[i]; beforeSnapshot[name] = before.getPropertyValue(name); }
+      probe.className = newClassName || '';
+      var after = getComputedStyle(probe);
+      for (var j = 0; j < after.length; j++) {
+        var name2 = after[j];
+        if (after.getPropertyValue(name2) !== beforeSnapshot[name2]) return true;
+      }
+      return false;
+    } finally {
+      probe.remove();
+    }
+  }
+  // Para el indicador de la fila (overridden/overridden-claude, ver
+  // makeEditableRow/makeEditableColorRow): un override guardado bajo
+  // 'class' (swap de clase completo, ej. una sugerencia de Claude
+  // agregando text-tertiary) no tiene ninguna entrada bajo el nombre de
+  // la propiedad real que termina afectando (ej. 'color') — sin esto, la
+  // fila de esa propiedad no encontraba nada y se mostraba como si nunca
+  // hubiese cambiado, aunque el valor computado sí fuera distinto y
+  // viniera de IA. Mismo probe que classChangeHasVisibleEffect, pero
+  // comparando solo la propiedad puntual que le interesa a esta fila.
+  function resolveOverrideEntryForProp(el, selector, prop) {
+    var overrides = getElementOverrides(selector);
+    if (overrides[prop]) return overrides[prop];
+    var classEntry = overrides['class'];
+    if (!classEntry) return null;
+    var probe = document.createElement(el.tagName);
+    probe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
+    document.body.appendChild(probe);
+    probe.className = classEntry.original || '';
+    var before = getComputedStyle(probe).getPropertyValue(prop);
+    probe.className = classEntry.value || '';
+    var after = getComputedStyle(probe).getPropertyValue(prop);
+    probe.remove();
+    return (before !== after) ? classEntry : null;
+  }
   function readOriginalValue(el, prop) {
     if (prop === 'class') return el.className;
     if (prop.indexOf('text:') === 0) {
@@ -2320,12 +4232,17 @@
     }
     return el.style.getPropertyValue(prop);
   }
-  function setElementOverride(el, selector, prop, value) {
+  // `source` es puramente informativo ('user', default, o 'claude' cuando
+  // viene de una respuesta de Sugerir) — no cambia en nada cómo se guarda ni
+  // se aplica el valor, solo permite que la UI (ver .overridden-claude y el
+  // punto violeta de refreshModifiedMarkers) marque distinto lo que tocó la
+  // IA de lo que tocó el humano a mano.
+  function setElementOverride(el, selector, prop, value, source) {
     var store = getOverridesStore();
     var page = store[pageOverrideKey()] || (store[pageOverrideKey()] = {});
     var entry = page[selector] || (page[selector] = {});
     var original = entry[prop] ? entry[prop].original : readOriginalValue(el, prop);
-    entry[prop] = { value: value, original: original };
+    entry[prop] = { value: value, original: original, source: source || 'user' };
     setOverridesStore(store);
     applyOverrideValue(el, prop, value);
   }
@@ -2342,6 +4259,7 @@
     });
     delete page[selector];
     setOverridesStore(store);
+    removeLiveHistoryEntriesForSelector(selector);
   }
   // Como clearElementOverrides, pero para UNA sola propiedad — usado por
   // Ocultar/mostrar (ver más abajo) para no pisar otros overrides que ese
@@ -2620,9 +4538,28 @@
   // ni selector (a diferencia de propsToCssBlock, pensado para pegar en un
   // archivo .css).
   function propsToTailwindClasses(propsMap) {
-    return dedupe(Object.keys(propsMap)
-      .filter(function (prop) { return prop !== 'class' && prop.indexOf('text:') !== 0; })
-      .map(function (prop) { return valueToTailwindClass(prop, propsMap[prop].value); })).join(' ');
+    var parts = [];
+    Object.keys(propsMap).forEach(function (prop) {
+      if (prop.indexOf('text:') === 0) return;
+      if (prop === 'class') {
+        // Un override de 'class' YA es una lista de utilities — no hay
+        // nada que "convertir" (a diferencia de un prop CSS real, que
+        // valueToTailwindClass sí tiene que traducir). Lo que hay que
+        // copiar es la DIFERENCIA (lo agregado respecto al original), no
+        // la lista completa: si el override entero es un swap de clase
+        // (ej. una sugerencia de Claude cambiando a text-tertiary), antes
+        // esta función lo descartaba entero asumiendo que nunca había
+        // nada real que copiar acá — dejaba el TWCSS vacío (⚠️) aunque la
+        // clase agregada estuviera justo ahí en el valor guardado.
+        var entry = propsMap[prop];
+        var oldSet = {};
+        (entry.original || '').trim().split(/\s+/).forEach(function (c) { if (c) oldSet[c] = true; });
+        (entry.value || '').trim().split(/\s+/).forEach(function (c) { if (c && !oldSet[c]) parts.push(c); });
+        return;
+      }
+      parts.push(valueToTailwindClass(prop, propsMap[prop].value));
+    });
+    return dedupe(parts).join(' ');
   }
   function buildModifiedCss(selectorPropsMap) {
     return Object.keys(selectorPropsMap)
@@ -2648,22 +4585,54 @@
     if (!page) return 0;
     return Object.keys(page).reduce(function (total, selector) { return total + Object.keys(page[selector]).length; }, 0);
   }
+  // Igual que countAllOverrides, pero solo cuenta las que vinieron de una
+  // Sugerencia de Claude (ver source en setElementOverride) — para el badge
+  // del ícono ✨ de la pastilla (pillLiveBadge), no de TODOS los cambios
+  // pendientes (eso ya lo cubre pillResetAllCount).
+  function countClaudeOverrides() {
+    var store = getOverridesStore();
+    var page = store[pageOverrideKey()];
+    if (!page) return 0;
+    return Object.keys(page).reduce(function (total, selector) {
+      return total + Object.keys(page[selector]).filter(function (prop) { return page[selector][prop].source === 'claude'; }).length;
+    }, 0);
+  }
   // Restablece TODOS los elementos de la página de una sola vez (botón de
   // la píldora), no uno por uno como el ↺ Restablecer del panel.
   function clearAllOverrides() {
     var store = getOverridesStore();
     var page = store[pageOverrideKey()];
-    if (!page) return;
-    Object.keys(page).forEach(function (selector) {
-      var el = uniqueElementFor(selector);
-      if (el) clearElementOverrides(el, selector);
-    });
-    // clearElementOverrides ya reescribe el store selector por selector,
-    // pero si algún selector no encontró elemento (ej. cambió el DOM) no
-    // queda borrado del store — se fuerza acá para no dejar basura.
-    var freshStore = getOverridesStore();
-    delete freshStore[pageOverrideKey()];
-    setOverridesStore(freshStore);
+    if (page) {
+      Object.keys(page).forEach(function (selector) {
+        var el = uniqueElementFor(selector);
+        if (el) clearElementOverrides(el, selector);
+      });
+      // clearElementOverrides ya reescribe el store selector por selector,
+      // pero si algún selector no encontró elemento (ej. cambió el DOM) no
+      // queda borrado del store — se fuerza acá para no dejar basura.
+      var freshStore = getOverridesStore();
+      delete freshStore[pageOverrideKey()];
+      setOverridesStore(freshStore);
+    }
+    // "Restablecer todo" es la señal explícita de "descartar TODO lo
+    // pendiente" — barre además cualquier entrada 'suggest' que haya
+    // quedado huérfana (marcada como no aplicada, applied !== true) SIN
+    // depender de que su override siga existiendo en este momento. Sin
+    // esto, una entrada podía quedar atascada para siempre si su override
+    // ya se había perdido antes de este reset (bug real reportado: una
+    // sugerencia nunca aplicada sobrevivía a repeticiones de "R" porque el
+    // bucle de arriba no tenía nada que recorrer para ese selector). Las
+    // entradas 'commit-all' y las 'suggest' con applied=true (ver
+    // markLiveHistoryEntriesApplied) nunca se tocan acá.
+    var historyStore = getLiveHistoryStore();
+    var list = historyStore[pageOverrideKey()];
+    if (list && list.length) {
+      var filtered = list.filter(function (entry) { return !(entry.type === 'suggest' && !entry.applied); });
+      if (filtered.length !== list.length) {
+        historyStore[pageOverrideKey()] = filtered;
+        setLiveHistoryStore(historyStore);
+      }
+    }
   }
   function updateOverrideIndicator() {
     var count = countAllOverrides();
@@ -2672,7 +4641,879 @@
     pillResetAllBtn.classList.toggle('show', count > 0);
     pillResetAllCount.textContent = count;
     pillCopyCssBtn.classList.toggle('show', count > 0);
+    var claudeCount = countClaudeOverrides();
+    pillLiveBadge.textContent = claudeCount;
+    pillLiveBadge.style.display = claudeCount > 0 ? 'flex' : 'none';
+    // Ícono repurposado "Aplicar todos" (pillCopyComponentBtn, solo cuando
+    // liveHelperAvailable): número total de cambios pendientes + clase
+    // visual para indicar "hay algo para guardar" (ver .has-pending-commit).
+    var canCommitAll = liveHelperAvailable && count > 0;
+    pillCommitAllBadge.textContent = count;
+    pillCommitAllBadge.style.display = canCommitAll ? 'flex' : 'none';
+    pillCopyComponentBtn.classList.toggle('has-pending-commit', canCommitAll);
     refreshModifiedMarkers();
+    updateLiveActionsVisibility();
+  }
+  // Flash puntual (mismo patrón/duración que flashButtonFeedback): el badge
+  // muestra un check ✓ sobre fondo verde durante ~1.3s y después vuelve solo
+  // a su estado normal (que a esa altura ya está oculto, porque el conteo
+  // llegó a 0). Se llama SOLO desde un "aplicar" exitoso, nunca desde
+  // updateOverrideIndicator en general — si se llamara ahí, flashearía en
+  // cualquier cambio de conteo (ej. al editar un valor a mano), no solo al
+  // aplicar de verdad.
+  function flashPillBadgeApplied(badgeEl) {
+    var originalText = badgeEl.textContent;
+    var hadGreen = badgeEl.classList.contains('pill-live-badge-green');
+    badgeEl.textContent = '✓';
+    badgeEl.classList.add('pill-live-badge-green');
+    badgeEl.style.display = 'flex';
+    setTimeout(function () {
+      if (!hadGreen) badgeEl.classList.remove('pill-live-badge-green');
+      badgeEl.textContent = originalText;
+      updateOverrideIndicator();
+    }, 1300);
+  }
+  // Se llama DESPUÉS de updateOverrideIndicator() en un apply exitoso — si
+  // el conteo correspondiente quedó en 0 (ya no hay nada pendiente de ese
+  // tipo), flashea el check verde en vez de dejar el badge ocultarse en
+  // silencio. Pedido explícito del usuario: confirmar visualmente que "ya
+  // no queda nada pendiente", no solo que el número desapareció.
+  function flashAppliedBadgesIfEmpty() {
+    if (countClaudeOverrides() === 0) flashPillBadgeApplied(pillLiveBadge);
+    if (countAllOverrides() === 0) flashPillBadgeApplied(pillCommitAllBadge);
+  }
+  // El servidor puente solo acepta UN pedido live en curso a la vez (409
+  // "busy" si llega otro mientras el primero no terminó — a propósito, no
+  // hay cola real, ver lens-sk-live-server.js). Sin este bloqueo cruzado,
+  // el usuario podía mandar 🪄 Sugerir y, mientras esperaba, clickear 📤
+  // Aplicar todos (u otro disparador) — el segundo pedido chocaba con el
+  // primero sin ningún aviso claro. Bloquea los 4 disparadores que mandan
+  // /event (Sugerir, Aplicar, Aplicar todos panel + su atajo repurposado en
+  // la pastilla) mientras CUALQUIERA de ellos esté en curso; al terminar,
+  // cada control vuelve a su estado natural (no simplemente "habilitado":
+  // liveCommitBtn/liveCommitAllBtn dependen de si hay overrides pendientes).
+  // Id del único pedido live en curso ahora mismo (o null) — lo usa
+  // liveCancelBtn para saber a quién mandarle POST /cancel. Se setea al
+  // armar el payload en cada uno de los 3 flujos (Sugerir/Aplicar/Aplicar
+  // todos) y se limpia acá mismo, en setLiveRequestBusy(false).
+  var currentLiveRequestId = null;
+  function setLiveRequestBusy(active) {
+    // No basta con "active": si ya se restaura y el textarea sigue vacío,
+    // liveSendBtn tiene que seguir deshabilitado igual (ver
+    // updateLiveSendBtnDisabled) — active siempre gana mientras es true.
+    liveSendBtn.disabled = active || !liveTextarea.value.trim();
+    liveTextarea.disabled = active;
+    pillCopyClassesBtn.disabled = active;
+    pillCopyComponentBtn.disabled = active;
+    if (active) {
+      liveCommitBtn.disabled = true;
+      liveCommitAllBtn.disabled = true;
+    } else {
+      updateLiveActionsVisibility();
+      liveCommitAllBtn.disabled = countAllOverrides() === 0;
+      currentLiveRequestId = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Modo live: puente hacia un Claude Code que esté escuchando en
+  // lens-sk-live-server.js (ver ese archivo para el protocolo completo:
+  // GET /status, GET /poll, POST /event, POST /reply). Reusa por completo
+  // el sistema de overrides que YA existe (setElementOverride/
+  // getElementOverrides) — "sugerido por Claude" y "editado a mano con
+  // ✏️" terminan en exactamente el mismo lugar, así que "aplicar a
+  // archivos reales" no necesita saber cuál de los dos fue.
+  // ---------------------------------------------------------------------
+  var LIVE_HELPER_PORT = 8137;
+  var liveHelperAvailable = false;
+  // Distingue "todavía no se confirmó" de "se confirmó que NO responde" —
+  // sin esto, restoreState() (síncrono, corre antes de que este fetch
+  // resuelva) encontraba liveHelperAvailable en su valor por defecto (false)
+  // y el guard de updateLiveActionsVisibility sacaba de la vista "live" a
+  // cualquiera que la tuviera guardada, aunque el servidor sí estuviera
+  // corriendo — bug real: la pestaña de Asistencia Claude nunca sobrevivía
+  // a un F5.
+  var liveHelperChecked = false;
+  function liveHelperBase() { return 'http://localhost:' + LIVE_HELPER_PORT; }
+  // "liveHelperAvailable" refleja "¿hay un Claude escuchando de verdad AHORA
+  // MISMO?" (`data.connected`, ver /status en lens-sk-live-server.js), no
+  // solo "¿el proceso del servidor responde?". Antes se usaba esta segunda
+  // señal más débil a propósito, porque `data.connected` venía del viejo
+  // `GET /poll` de ~55s y flasheaba cada vez que expiraba y se relanzaba.
+  // Ya no: el servidor usa SSE (`GET /events`, conexión abierta que dura
+  // toda la sesión de Claude), así que `connected` es estable de verdad —
+  // true todo el tiempo que dure la sesión, false apenas se corta. Usar la
+  // señal fuerte evita la falsa expectativa de mostrar 🪄/📤 cuando en
+  // realidad no hay nadie del otro lado (pedido explícito del usuario).
+  function checkLiveHelper() {
+    fetch(liveHelperBase() + '/status')
+      .then(function (r) { if (!r.ok) throw new Error('bad status'); return r.json(); })
+      // updateOverrideIndicator() (no solo updateLiveActionsVisibility) —
+      // esta sí recalcula el badge/verde de "Aplicar todos"
+      // (pillCommitAllBadge/.has-pending-commit, ver más abajo), que
+      // depende de liveHelperAvailable. restoreState() corre ANTES de que
+      // este fetch resuelva, así que la primera vez que se pinta ese badge
+      // (durante pin() al restaurar) liveHelperAvailable todavía es false
+      // — sin este refresco recién acá, el badge se quedaba apagado para
+      // siempre aunque el servidor sí estuviera respondiendo (bug real:
+      // desaparecía justo al recargar la página).
+      .then(function (data) {
+        liveHelperAvailable = !!(data && data.connected);
+        liveHelperChecked = true;
+        maybeResetLiveHistoryOnNewBoot(data && data.bootId);
+        updateOverrideIndicator();
+      })
+      .catch(function () { liveHelperAvailable = false; liveHelperChecked = true; updateOverrideIndicator(); });
+  }
+  // El servidor genera un bootId nuevo (al azar) cada vez que arranca
+  // (`npm run dev`) — ver lens-sk-live-server.js. Si el bootId que devuelve
+  // /status cambió respecto al último que vimos, es que hubo un reinicio
+  // real del servidor desde la última vez, así que el HISTORIAL de esta
+  // página se limpia entero: cualquier cambio que se haya aplicado en la
+  // sesión anterior ya quedó escrito en el archivo real (es parte del
+  // proyecto), no tiene sentido seguir arrastrando ese registro — pedido
+  // explícito del usuario. Los overrides en vista previa NO se tocan acá:
+  // tienen su propio ciclo de vida (ver clearElementOverrides/"Restablecer").
+  var LIVE_HISTORY_BOOT_ID_KEY = '__claudeInspectorLiveBootId';
+  function maybeResetLiveHistoryOnNewBoot(bootId) {
+    if (!bootId) return;
+    var lastBootId = null;
+    try { lastBootId = localStorage.getItem(LIVE_HISTORY_BOOT_ID_KEY); } catch (e) {}
+    if (lastBootId === bootId) return;
+    try { localStorage.setItem(LIVE_HISTORY_BOOT_ID_KEY, bootId); } catch (e) {}
+    if (lastBootId === null) return; // primera vez que se ve un bootId: nada que limpiar todavía
+    try { localStorage.removeItem(LIVE_HISTORY_STORAGE_KEY); } catch (e) {}
+    renderLiveHistory();
+    renderLastLiveResult();
+  }
+  // Mapa componente/card → archivo (ver lens-sk-project-map.js), para
+  // resolver "Ir al código" SIN pedirme ayuda en el caso común. Se pide una
+  // sola vez y se cachea — así, para cuando el usuario clickea, ya está
+  // listo y la resolución es sincrónica de verdad (importa: si hubiera que
+  // esperar un fetch recién en el clic, el eventual vscode://file/... que
+  // dispare después corre el mismo riesgo de la "activación transitoria"
+  // que ya rompió el flujo viejo — ver doLiveLocate).
+  var componentMapCache = null;
+  var elementIndexCache = null; // {[file]: {[tagName]: [línea,...]}} — ver lens-sk-project-map.js
+  var themeRootCache = '';
+  // Lista de rutas de archivo del theme (Object.keys de "files" en
+  // project-map.json) — se reusa esta MISMA info ya cacheada para el menú
+  // "@" del textarea de Asistencia Claude (ver attachComposeMenus): decisión
+  // tomada por el usuario vía /ask-user en vez de un endpoint /files nuevo.
+  // Cubre los ~54 archivos PHP que ya indexa lens-sk-project-map.js, no
+  // TODO el árbol del theme (JS/CSS sueltos quedan afuera) — trade-off
+  // aceptado a cambio de no tocar el servidor.
+  var filePathsCache = null;
+  var componentMapPromise = null;
+  function ensureComponentMap() {
+    if (componentMapCache) return Promise.resolve(componentMapCache);
+    if (!componentMapPromise) {
+      componentMapPromise = fetch(liveHelperBase() + '/project-map.json')
+        .then(function (r) { if (!r.ok) throw new Error('not ready'); return r.json(); })
+        .then(function (data) {
+          componentMapCache = data.componentMap || {};
+          elementIndexCache = data.elementIndex || {};
+          themeRootCache = data.themeRoot || '';
+          filePathsCache = Object.keys(data.files || {});
+          return componentMapCache;
+        })
+        .catch(function () { componentMapPromise = null; return null; }); // no cachea el fallo: reintenta la próxima vez (el mapa puede no estar listo todavía al arrancar)
+    }
+    return componentMapPromise;
+  }
+  // Mismo criterio que firstMeaningfulClass/labelFor: el propio elemento,
+  // después cada ancestro hasta 12 niveles, buscando la primera clase
+  // no-utilitaria que resuelva a una entrada del mapa. A diferencia de la
+  // versión vieja (que solo devolvía el string de la clase), acá se guarda
+  // también el NODO donde paró (`rootNode`) — es el elemento que representa
+  // la raíz del archivo resuelto, y resolveElementLine() lo necesita después
+  // para ubicar la posición del elemento clickeado adentro de esa raíz.
+  function resolveComponentFileClientSide(el) {
+    if (!componentMapCache) return null;
+    var node = el, depth = 0;
+    while (node && depth <= 12) {
+      var c = firstMeaningfulClass(node);
+      if (c) {
+        var entry = componentMapCache[c];
+        if (entry && entry.file) return { file: entry.file, line: entry.line, rootNode: node };
+      }
+      node = node.parentElement;
+      depth++;
+    }
+    return null;
+  }
+  // Baja de "línea raíz de la card/componente" a "línea del elemento
+  // clickeado dentro de ella", usando elementIndex (ver
+  // lens-sk-project-map.js): cuenta qué posición ocupa `el` entre los tags
+  // del mismo nombre DENTRO del rootNode ya resuelto, y busca esa misma
+  // posición en el índice estático de ese archivo. Como cada card es una
+  // plantilla PHP fija (mismo orden de tags en cada render, solo cambia el
+  // contenido), la N-ésima aparición de un tag en el DOM de una instancia
+  // corresponde a la N-ésima aparición de ese tag en su archivo fuente.
+  // Atajo, no verdad absoluta (ver comentario en lens-sk-project-map.js): si
+  // no hay correspondencia clara, se devuelve la línea raíz sin más —  nunca
+  // se inventa un número.
+  function resolveElementLine(resolved, el) {
+    if (!resolved) return null;
+    if (el === resolved.rootNode) return resolved.line;
+    if (!elementIndexCache) return resolved.line;
+    var fileIndex = elementIndexCache[resolved.file];
+    var tagName = el.tagName.toLowerCase();
+    var lines = fileIndex && fileIndex[tagName];
+    if (!lines || !lines.length) return resolved.line;
+    var sameTagInRoot = resolved.rootNode.getElementsByTagName(tagName);
+    var idx = Array.prototype.indexOf.call(sameTagInRoot, el);
+    if (idx === -1 || idx >= lines.length) return resolved.line;
+    return lines[idx];
+  }
+  function checkFileExists(relFile) {
+    return fetch(liveHelperBase() + '/file-exists?path=' + encodeURIComponent(relFile))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return !!(d && d.exists); })
+      .catch(function () { return false; });
+  }
+  // Ya no hay un "grupo" DOM que mostrar/ocultar — la vista "live" del panel
+  // (ver renderLive) se muestra/oculta sola vía activeTool, igual que
+  // Layout/Estilos. Acá solo queda: el ícono de la pastilla (visible según
+  // liveHelperAvailable) y, si el servidor deja de responder mientras esa
+  // vista está activa, volver a Componente (mismo efecto que antes tenía
+  // ocultar el grupo entero).
+  function updateLiveActionsVisibility() {
+    pillLiveBtn.style.display = liveHelperAvailable ? 'flex' : 'none';
+    syncRepurposedPillIcons();
+    if (liveHelperChecked && !liveHelperAvailable && activeTool === 'live') { selectTool('component'); return; }
+    if (!pinnedEl) return;
+    var hasOverrides = Object.keys(getElementOverrides(cssSelectorFor(pinnedEl))).length > 0;
+    liveCommitBtn.disabled = !hasOverrides;
+  }
+  // Con Claude escuchando (liveHelperAvailable), 📋 Copiar clases y 🏷️ Clase
+  // componente se "reusan" como atajos de Código/Aplicar en vez de sumar dos
+  // íconos más a una pastilla que ya tiene muchos — mismo botón físico,
+  // mismo atajo de teclado (C/T), el ícono y el título cambian para reflejar
+  // la acción real (ver onPillIcon/doCopyClassesShortcut/doCopyComponentShortcut
+  // y onDblClick más abajo, que consultan liveHelperAvailable en cada uso).
+  // `.firstChild` es el nodo de texto del ícono (ver makeIconButton) — se
+  // pisa solo ese, no todo el botón, para no perder el badge del atajo que
+  // cuelga como segundo hijo (addHotkeyBadge).
+  function syncRepurposedPillIcons() {
+    if (liveHelperAvailable) {
+      pillCopyClassesBtn.firstChild.textContent = '📍';
+      pillCopyClassesBtn.title = tr('liveLocateBtnTitle');
+      pillCopyComponentBtn.firstChild.textContent = '📤';
+      pillCopyComponentBtn.title = tr('liveCommitBtnTitle');
+    } else {
+      pillCopyClassesBtn.firstChild.textContent = '📋';
+      pillCopyClassesBtn.title = tr('shortcutCopyClasses');
+      pillCopyComponentBtn.firstChild.textContent = '🏷️';
+      pillCopyComponentBtn.title = tr('shortcutCopyComponent');
+    }
+  }
+  // El id lo genera el navegador (no el servidor) — así, apenas se manda el
+  // pedido, ya se puede empezar a pollear GET /progress?id=... para ESE
+  // pedido puntual sin tener que esperar a la respuesta final (que llega
+  // recién en /reply, que puede tardar). Mismo formato que randomId() del
+  // servidor, no hace falta que coincida — solo tiene que ser único.
+  function randomLiveId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+  // Mismo criterio que "AGREGAR PROPIEDAD" (ver addCustomProp) — para que una
+  // propiedad que Claude agregó vía Sugerir (ej. filter) aparezca como fila
+  // visible en Estilos (con su indicador .overridden-claude) en vez de
+  // quedar aplicada pero invisible en el panel. customStyleProps es global
+  // (no por elemento), mismo comportamiento ya establecido para lo que
+  // agrega un humano a mano.
+  function registerCustomStyleProp(prop) {
+    if (prop === 'class' || prop.indexOf('text:') === 0) return;
+    if (customStyleProps.indexOf(prop) === -1) customStyleProps.push(prop);
+  }
+  // Ancho real de la ventana + qué breakpoint está activo AHORA (mismo
+  // cálculo que updateBadge, ver más abajo) — independiente de si el badge
+  // visual está prendido (bpInput.checked): esto viaja SIEMPRE en el
+  // payload de cualquier pedido de Asistencia Claude, pedido explícito del
+  // usuario después de que yo diagnostiqué mal un problema de layout
+  // asumiendo un ancho de ventana que no era el real.
+  function currentBreakpointInfo() {
+    var w = window.innerWidth;
+    var list = activeBpList();
+    var active = null, bestDist = Infinity;
+    list.forEach(function (bp) {
+      if (!bpMatches(w, bp)) return;
+      var dist = Math.abs(w - bp.value);
+      if (dist < bestDist) { bestDist = dist; active = bp; }
+    });
+    return { width: w, breakpoint: active ? bpLabel(active) : 'base' };
+  }
+  function buildLiveEventPayload(el, extra) {
+    var bp = currentBreakpointInfo();
+    // Resuelto client-side con el mismo mecanismo que 📍 Código — si ya se
+    // puede saber el archivo/línea sin preguntarle a Claude, se lo mandamos
+    // hecho (pedido explícito del usuario: "para que encuentre el archivo
+    // más rápido"). Puede no resolver (null) si el mapa de proyecto no
+    // conoce ese componente — ahí Claude sigue el camino de siempre
+    // (componentGuess + project-map.json).
+    var resolvedFile = resolveComponentFileClientSide(el);
+    // Árbol compacto (ver buildCompactDomTree) SOLO para 'suggest' — es el
+    // único tipo donde Claude todavía tiene que decidir un valor y se
+    // beneficia de contexto de estructura; en 'commit'/'locate' el valor ya
+    // está decidido o no hace falta estructura, así que mandarlo ahí sería
+    // gastar tokens sin ningún beneficio real (pedido explícito del
+    // usuario, consciente del costo en tokens, no de tamaño de payload).
+    var isSuggestType = extra && extra.type === 'suggest';
+    var compactTree = isSuggestType ? buildCompactDomTree(el) : null;
+    // Padre inmediato (tag+clases, una línea) — contexto de EN QUÉ está
+    // metido el elemento (¿es flex-item? ¿grid-item? ¿de qué contenedor?),
+    // costo casi nulo, no estaba en ningún lado del payload (descendantOverrides
+    // y domTree solo miran hacia ABAJO del elemento, nunca hacia arriba).
+    var parentInfo = el.parentElement ? compactNodeSignature(el.parentElement) : null;
+    // Escala de breakpoints del proyecto (nombre→px) — se manda entera y
+    // liviana (activeBpList() ya está calculada, no hay trabajo extra) para
+    // no tener que ir a buscar el umbral real de "lg"/"xl"/etc. a mano cada
+    // vez que hace falta razonar sobre algo responsive (antes tuve que
+    // grepear _containers.css para esto mismo).
+    var breakpointScale = {};
+    activeBpList().forEach(function (b) { if (b.name) breakpointScale[b.name] = b.value; });
+    // Puñado ACOTADO de computed styles reales — no todo el CSSStyleDeclaration
+    // (sería enorme y en su mayoría ruido). Estas 5 son las que más varían
+    // por herencia/cascada y menos se pueden inferir con certeza solo de las
+    // clases (a diferencia de width/height, que ya se ven en la captura).
+    var elCs = getComputedStyle(el);
+    var keyComputedStyle = {
+      color: elCs.color,
+      backgroundColor: elCs.backgroundColor,
+      fontSize: elCs.fontSize,
+      display: elCs.display,
+      position: elCs.position,
+    };
+    return Object.assign({
+      id: randomLiveId(),
+      selector: cssSelectorFor(el),
+      tag: el.tagName.toLowerCase(),
+      classes: (el.className && typeof el.className === 'string') ? el.className : '',
+      textSnippet: (el.textContent || '').trim().slice(0, 120),
+      componentGuess: labelFor(el),
+      viewportWidth: bp.width,
+      breakpoint: bp.breakpoint,
+      breakpointScale: breakpointScale,
+      parent: parentInfo,
+      computedStyle: keyComputedStyle,
+      // Estado del switch "TWCSS" del panel al momento del pedido — señal
+      // para Claude de si preferir clases de utilidad Tailwind (true) o CSS
+      // literal (false) al responder/aplicar, en vez de asumir siempre TW
+      // (pedido explícito del usuario, ver skill lens-sk-live-listen).
+      twcssMode: !!(twcssInput && twcssInput.checked),
+      fileHint: resolvedFile ? { file: resolvedFile.file, line: resolveElementLine(resolvedFile, el) } : null,
+      // Cambios en vista previa YA pendientes del propio elemento del
+      // evento (no solo de sus hijos, ver descendantOverrides abajo) — sin
+      // esto, un 🪄 Sugerir sobre un elemento que ya tenía un override de un
+      // pedido anterior no tenía forma de saberlo, y podía chocar o
+      // duplicar ese cambio en vez de partir de él (pedido explícito del
+      // usuario). Mismo formato crudo que descendantOverrides.props:
+      // `{prop: {value, original, source}}`. Vacío `{}` si no hay nada
+      // pendiente en este elemento puntual.
+      currentOverrides: getElementOverrides(cssSelectorFor(el)),
+      descendantOverrides: collectDescendantOverrides(el),
+      domTree: compactTree ? compactTree.text : null,
+      domTreeTruncated: compactTree ? compactTree.truncated : false,
+    }, extra);
+  }
+  // Poll liviano de progreso (ver POST/GET /progress en
+  // lens-sk-live-server.js) — reemplaza el "Esperando a Claude…" estático
+  // por lo último que yo haya reportado ("Leyendo archivo…", etc.), sin
+  // necesidad de una conexión SSE permanente del lado del navegador (esta
+  // solo corre mientras HAY un pedido en curso, se corta sola al resolver).
+  // Cada mensaje NUEVO (distinto del último mostrado) también sale como
+  // toast con 🤖 — así se ve aunque el panel de Asistencia Claude no esté
+  // abierto en ese momento, no solo dentro del textarea.
+  // Puntos animados en bucle (. / .. / ...) atrás de lo que sea que se esté
+  // mostrando — corre 100% en el navegador, sin depender de que Claude
+  // mande nada: da la sensación de "está pasando algo" incluso si todavía
+  // no llegó ningún /progress real. Se frena junto con el poll (ver
+  // stopLiveProgressPoll) y ahí mismo se vacía statusEl — "en curso" y
+  // "resultado final" son elementos DISTINTOS (liveStatus vs
+  // liveLastResultBox), así que al terminar este no debe dejar texto atrás.
+  // Dos elementos, dos roles — NO se mezclan (pedido explícito del usuario):
+  // `titleEl` (liveStatus) es un título fijo ("Aplicando cambio…") con
+  // puntos animados atrás, nunca muestra texto real de Claude. Los mensajes
+  // reales que Claude va mandando por /progress (mini-conclusiones, no
+  // relleno) aparecen en `resultBoxEl` (liveLastResultBox), reemplazándose
+  // entre sí hasta que el resultado final los pisa.
+  function startLiveProgressPoll(id, titleEl, fallbackTitle, resultBoxEl) {
+    var stopped = false;
+    var lastShown = null;
+    var lastQuestion = null;
+    var dotFrames = ['.', '..', '...'];
+    var dotIndex = 0;
+    function renderTitle() { titleEl.textContent = fallbackTitle + dotFrames[dotIndex]; }
+    function tick() {
+      if (stopped) return;
+      fetch(liveHelperBase() + '/progress?id=' + encodeURIComponent(id))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (stopped) return;
+          var text = (d && d.progress) ? d.progress : '';
+          if (text && text !== lastShown) {
+            lastShown = text;
+            resultBoxEl.textContent = text;
+            resultBoxEl.style.display = 'block';
+            showToast('🤖 ' + text, 'success');
+          }
+          // Pregunta de Claude a mitad de este pedido (ver /ask en
+          // lens-sk-live-server.js) — se muestra apenas aparece, con toast
+          // aparte para que se note aunque el panel no esté abierto. Se
+          // esconde sola si Claude la retira (ya no viene "question" en el
+          // poll) sin que haya pasado por sendLiveAnswer (ej. Claude decidió
+          // seguir sin esperar la respuesta).
+          var question = (d && d.question) ? d.question : '';
+          if (question && question !== lastQuestion) {
+            lastQuestion = question;
+            liveQuestionCurrentId = id;
+            liveQuestionText.textContent = '❓ ' + question;
+            liveQuestionBox.style.display = 'block';
+            liveQuestionInput.value = '';
+            liveQuestionInput.focus();
+            showToast('❓ ' + question, 'success');
+          } else if (!question && lastQuestion) {
+            lastQuestion = null;
+            liveQuestionBox.style.display = 'none';
+          }
+        })
+        .catch(function () { /* red caída a mitad de camino: no rompe nada, sigue con lo último que había */ });
+    }
+    renderTitle();
+    tick();
+    var timer = setInterval(tick, 900);
+    var dotTimer = setInterval(function () {
+      if (stopped) return;
+      dotIndex = (dotIndex + 1) % dotFrames.length;
+      renderTitle();
+    }, 450);
+    return function stopLiveProgressPoll(doneText) {
+      stopped = true;
+      clearInterval(timer);
+      clearInterval(dotTimer);
+      // El pedido ya se resolvió (llegó /reply) — cualquier pregunta que
+      // hubiera quedado colgada sin responder ya no tiene destino, esconderla.
+      liveQuestionBox.style.display = 'none';
+      liveQuestionCurrentId = null;
+      // Los puntos frenan (dotTimer cortado) Y desaparecen de verdad — se
+      // pisa el título "Aplicando…" por un texto que confirma que terminó
+      // (ej. "✓ Listo"), no se deja el título en curso congelado con los
+      // últimos puntos pegados. Si no se pasa doneText, no se toca nada
+      // (para casos donde el estado final ya lo maneja otra cosa).
+      if (doneText) titleEl.textContent = doneText;
+    };
+  }
+  function sendLiveEvent(payload) {
+    return fetch(liveHelperBase() + '/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(function (r) { return r.json(); });
+  }
+  // Captura simple (sin la tira rosa/label de doCapture, es para que la
+  // lea Claude, no para pegarla en un chat) — reusa el mismo
+  // window.modernScreenshot que ya usa la acción rápida 📸.
+  // Franja fija arriba de la captura con ancho real + breakpoint activo —
+  // mismo dato que ya viaja en buildLiveEventPayload, pero visible adentro
+  // de la propia imagen (pedido explícito: la captura sola no decía nada
+  // de en qué breakpoint se tomó).
+  function stampBreakpointHeader(canvas, scale) {
+    var ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return;
+    var bp = currentBreakpointInfo();
+    var text = '📱 ' + bp.width + 'px · ' + bp.breakpoint;
+    var barHeight = Math.round(22 * scale);
+    ctx.fillStyle = 'rgba(17,24,39,.85)';
+    ctx.fillRect(0, 0, canvas.width, barHeight);
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = Math.round(12 * scale) + 'px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 6 * scale, barHeight / 2);
+  }
+  // ---------------------------------------------------------------------
+  // Adjuntar documento (PDF/DOCX/XLSX/imagen) al pedido de Asistencia Claude
+  // — pedido explícito del usuario, con el mismo criterio de siempre: que a
+  // Claude le llegue la información lo más limpia y liviana posible (texto
+  // plano/Markdown, nunca el binario original), para no gastar tokens de
+  // más ni depender de que Claude sepa parsear cada formato.
+  // ---------------------------------------------------------------------
+  var ATTACHMENT_MAX_CHARS = 12000;
+  function truncateAttachmentText(text) {
+    if (text.length <= ATTACHMENT_MAX_CHARS) return { text: text, truncated: false };
+    return { text: text.slice(0, ATTACHMENT_MAX_CHARS), truncated: true };
+  }
+  function loadPdfDocument(arrayBuffer) {
+    return loadVendorScript('pdf.min.js').then(function () {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = devToolsBase + 'pdf.worker.min.js';
+      return window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    });
+  }
+  function extractPdfTextFromDoc(pdf) {
+    var pagePromises = [];
+    for (var i = 1; i <= pdf.numPages; i++) {
+      pagePromises.push(pdf.getPage(i).then(function (page) {
+        return page.getTextContent();
+      }).then(function (content) {
+        return content.items.map(function (it) { return it.str; }).join(' ');
+      }));
+    }
+    return Promise.all(pagePromises).then(function (pages) {
+      // pdf.js solo lee la capa de texto real — un PDF escaneado (cada
+      // página es una imagen, sin texto seleccionable) da string vacío en
+      // TODAS las páginas. En vez de avisar y dejarlo ahí, quien llama cae
+      // a renderPdfPagesToImages() para mandar las páginas como imágenes.
+      var hasRealText = pages.some(function (t) { return t.trim().length > 0; });
+      if (!hasRealText) return { hasText: false, text: '' };
+      return { hasText: true, text: pages.map(function (text, i) { return '## Página ' + (i + 1) + '\n\n' + text; }).join('\n\n') };
+    });
+  }
+  // PDF sin capa de texto (escaneado): renderizar cada página a canvas con
+  // pdf.js (page.render) y comprimir igual que una imagen adjunta normal
+  // (mismo tope de dimensión/calidad JPEG que compressAttachedImageFile).
+  // Tope de páginas para no disparar el costo de tokens en documentos largos.
+  var PDF_IMAGE_MAX_PAGES = 8;
+  var PDF_IMAGE_MAX_DIM = 1200;
+  function renderPdfPagesToImages(pdf) {
+    var n = Math.min(pdf.numPages, PDF_IMAGE_MAX_PAGES);
+    var indices = [];
+    for (var i = 1; i <= n; i++) indices.push(i);
+    return Promise.all(indices.map(function (pageNum) {
+      return pdf.getPage(pageNum).then(function (page) {
+        var baseViewport = page.getViewport({ scale: 1 });
+        var scale = Math.min(2, PDF_IMAGE_MAX_DIM / Math.max(baseViewport.width, baseViewport.height));
+        var viewport = page.getViewport({ scale: scale });
+        var canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function () {
+          return canvas.toDataURL('image/jpeg', .75);
+        });
+      });
+    }));
+  }
+  function extractDocxText(arrayBuffer) {
+    return loadVendorScript('mammoth.browser.min.js').then(function () {
+      // extractRawText (no convertToHtml/Markdown): mammoth no tiene un
+      // conversor a Markdown propio confiable, y para el uso acá (texto
+      // limpio, liviano) el texto plano alcanza — no hace falta preservar
+      // negritas/formato, solo el contenido real.
+      return window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+    }).then(function (result) {
+      return result.value;
+    });
+  }
+  function extractXlsxMarkdown(arrayBuffer) {
+    return loadVendorScript('xlsx.full.min.js').then(function () {
+      var wb = window.XLSX.read(arrayBuffer, { type: 'array' });
+      return wb.SheetNames.map(function (name) {
+        var rows = window.XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, blankrows: false });
+        if (!rows.length) return '## ' + name + '\n\n(hoja vacía)';
+        var lines = ['## ' + name, ''];
+        lines.push('| ' + rows[0].map(String).join(' | ') + ' |');
+        lines.push('|' + rows[0].map(function () { return ' --- '; }).join('|') + '|');
+        rows.slice(1).forEach(function (row) {
+          lines.push('| ' + row.map(function (c) { return c === undefined || c === null ? '' : String(c); }).join(' | ') + ' |');
+        });
+        return lines.join('\n');
+      }).join('\n\n');
+    });
+  }
+  // Mismo criterio de compresión que captureStructureContextDataURL (scale
+  // 1, tope de dimensión, JPEG) — una imagen adjunta por el usuario (ej. una
+  // foto de un documento) pasa por el mismo filtro antes de viajar.
+  function compressAttachedImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var MAX_DIM = 1400;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var longest = Math.max(w, h);
+        if (longest > MAX_DIM) { var ratio = MAX_DIM / longest; w = Math.round(w * ratio); h = Math.round(h * ratio); }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', .8));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+      img.src = url;
+    });
+  }
+  var ATTACHMENT_EXT_KIND = { pdf: 'pdf', docx: 'docx', xlsx: 'xlsx', xls: 'xlsx' };
+  // Devuelve {name, kind, content, truncated} para un adjunto normal, o un
+  // ARRAY de esos mismos objetos cuando un PDF sin texto extraíble cae al
+  // flujo de páginas-como-imagen (uno por página renderizada). Quien llama
+  // debe aplanar el resultado antes de empujarlo a liveAttachments.
+  function processAttachedFile(file) {
+    var ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (file.type.indexOf('image/') === 0) {
+      return compressAttachedImageFile(file).then(function (dataUrl) {
+        return { name: file.name, kind: 'image', content: dataUrl, truncated: false };
+      });
+    }
+    var kind = ATTACHMENT_EXT_KIND[ext];
+    if (!kind) return Promise.reject(new Error('Formato no soportado: .' + ext));
+    return file.arrayBuffer().then(function (buf) {
+      if (kind === 'pdf') {
+        return loadPdfDocument(buf).then(function (pdf) {
+          return extractPdfTextFromDoc(pdf).then(function (result) {
+            if (result.hasText) {
+              var t = truncateAttachmentText(result.text);
+              return { name: file.name, kind: kind, content: t.text, truncated: t.truncated };
+            }
+            return renderPdfPagesToImages(pdf).then(function (images) {
+              return images.map(function (dataUrl, i) {
+                return { name: file.name + ' — pág. ' + (i + 1), kind: 'image', content: dataUrl, truncated: false };
+              });
+            });
+          });
+        });
+      }
+      var textPromise = kind === 'docx' ? extractDocxText(buf) : extractXlsxMarkdown(buf);
+      return textPromise.then(function (text) {
+        var t = truncateAttachmentText(text);
+        return { name: file.name, kind: kind, content: t.text, truncated: t.truncated };
+      });
+    });
+  }
+  function captureElementDataURL(el) {
+    if (!window.modernScreenshot) return Promise.resolve(null);
+    var scale = Math.min(window.devicePixelRatio || 1, 2);
+    return window.modernScreenshot.domToCanvas(el, { scale: scale })
+      .then(function (canvas) {
+        stampBreakpointHeader(canvas, scale);
+        return canvas.toDataURL('image/png');
+      })
+      .catch(function () { return null; });
+  }
+  // Captura APARTE, solo para el envío automático a Claude (nunca para el
+  // botón ✏️ de editar captura a mano, que sigue usando la de arriba tal
+  // cual) — a propósito NO reusa el overlay de colores por profundidad de
+  // Layout/Delineado (necesitaba mezclar dos árboles de DOM separados vía
+  // captura de documento completo + recorte, y salió corrupta/desalineada
+  // en la prueba real). En vez de eso, marca un contorno simple y liviano
+  // sobre `el` y cada descendiente, DENTRO del propio subárbol que ya
+  // captura domToCanvas — no hace falta combinar nada ni recortar nada,
+  // mismo camino ya probado que funciona. No importa que se vea prolijo
+  // para el usuario (no es lo que edita ni lo que queda en su historial de
+  // "última captura"), alcanza con que la estructura sea legible para Claude.
+  // Sube por los ancestros hasta encontrar un background-color real (no
+  // transparente) — así el fondo de la captura refleja lo que de verdad se
+  // ve en pantalla (ej. una sección bg-surface) en vez de un gris inventado
+  // que no tiene nada que ver con el diseño real. Blanco como último
+  // fallback, que es lo que el navegador ya asume cuando nadie define nada.
+  function resolveEffectiveBackgroundColor(el) {
+    var node = el;
+    while (node) {
+      var bg = getComputedStyle(node).backgroundColor;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') return bg;
+      node = node.parentElement;
+    }
+    return '#ffffff';
+  }
+  function captureStructureContextDataURL(el) {
+    if (!window.modernScreenshot) return Promise.resolve(null);
+    var touched = [];
+    function markOutline(node) {
+      touched.push({ node: node, prevOutline: node.style.outline, prevOffset: node.style.outlineOffset });
+      node.style.outline = '1px solid rgba(236,72,153,.6)';
+      node.style.outlineOffset = '-1px';
+    }
+    markOutline(el);
+    Array.prototype.forEach.call(el.querySelectorAll('*'), markOutline);
+    function restore() { touched.forEach(function (t) { t.node.style.outline = t.prevOutline; t.node.style.outlineOffset = t.prevOffset; }); }
+    // scale SIEMPRE 1 acá (a diferencia de la captura normal, que sí respeta
+    // devicePixelRatio hasta x2) — esta imagen es solo para que Claude lea
+    // contornos/texto, no necesita nitidez de foto, y el costo en tokens de
+    // una imagen escala con los píxeles reales, no con el peso en bytes. En
+    // una pantalla retina, x2 cuadruplicaba los píxeles sin aportar nada
+    // (pedido explícito del usuario, consciente del costo en tokens).
+    var scale = 1;
+    var bgColor = resolveEffectiveBackgroundColor(el);
+    // Techo adicional de dimensión, aparte del scale: un componente grande
+    // (ej. el hero completo) puede seguir siendo ancho/alto igual a scale=1
+    // si el propio viewport ya es grande — bajamos ADEMÁS por debajo de
+    // MAX_DIM si hace falta, nunca lo agrandamos.
+    var MAX_DIM = 1200;
+    return window.modernScreenshot.domToCanvas(el, { scale: scale, backgroundColor: bgColor })
+      .then(function (canvas) {
+        // Sin stampBreakpointHeader acá a propósito — viewportWidth/breakpoint
+        // ya viajan aparte en el JSON del evento (pedido explícito del
+        // usuario: no duplicar ese dato adentro de la imagen, dejarla limpia
+        // para la estructura). El fondo SÍ se agrega, pero resuelto real
+        // (ver resolveEffectiveBackgroundColor) en vez de un color inventado
+        // — sin esto, cualquier zona transparente del elemento capturado
+        // salía transparente/negra en el PNG, dificultando distinguir
+        // bordes reales de huecos.
+        restore();
+        var longest = Math.max(canvas.width, canvas.height);
+        if (longest > MAX_DIM) {
+          var ratio = MAX_DIM / longest;
+          var small = document.createElement('canvas');
+          small.width = Math.round(canvas.width * ratio);
+          small.height = Math.round(canvas.height * ratio);
+          small.getContext('2d').drawImage(canvas, 0, 0, small.width, small.height);
+          canvas = small;
+        }
+        // JPEG con compresión, no PNG sin pérdida — el canvas ya compone
+        // sobre un fondo sólido (resolveEffectiveBackgroundColor), no queda
+        // transparencia que perder, y para fotos (ej. el hero-slider) el
+        // peso baja mucho más que solo bajando la resolución.
+        return canvas.toDataURL('image/jpeg', .8);
+      })
+      .catch(function () { restore(); return null; });
+  }
+  // Quita del store SOLO el bookkeeping de "hay vista previa pendiente" —
+  // a propósito NO llama a applyOverrideValue(original) como clearElementOverrides:
+  // el valor ya quedó escrito en el archivo real, así que revertir visualmente
+  // ahora mismo (antes de que el pipeline de build/reload lo sirva de nuevo)
+  // se vería como si el commit hubiese fallado.
+  function clearCommittedOverrideBookkeeping(selector) {
+    var store = getOverridesStore();
+    var page = store[pageOverrideKey()];
+    if (!page || !page[selector]) return;
+    delete page[selector];
+    setOverridesStore(store);
+  }
+  // "⏳" mientras espera: sin esto, un pedido mandado sin que haya ningún
+  // Claude escuchando en ese momento (queda aparcado en el servidor hasta 5
+  // min, ver lens-sk-live-server.js) solo mostraba el botón atenuado
+  // (:disabled) sin ningún otro indicio — se veía "trabado"/roto en vez de
+  // "esperando". Hay que restaurar el ícono real ANTES de llamar a
+  // flashButtonFeedback (no después): esa función captura `btn.innerHTML`
+  // tal cual esté en el momento del llamado como el estado a restaurar
+  // luego del flash — si todavía dice "⏳" en ese momento, se quedaría
+  // mostrando "⏳" para siempre después del ✅/❌.
+  // Nodo que hay que pisar con "⏳" mientras se espera respuesta — `btn`
+  // puede ser un botón armado con makeLiveBtn (tiene un <span class="live-btn-ic">
+  // propio) O uno de los íconos reusados de la pastilla (pillCopyClassesBtn/
+  // pillCopyComponentBtn, ver syncRepurposedPillIcons), que solo tienen un
+  // nodo de texto como primer hijo — sin este fallback, `.querySelector`
+  // devuelve null y romper acá tira abajo TODO el atajo de teclado que lo
+  // llamó (bug real: dejaba "c"/"t" sin reaccionar en absoluto).
+  function liveBtnIconNode(btn) {
+    return btn.querySelector('.live-btn-ic') || btn.firstChild;
+  }
+  function doLiveCommit(btn) {
+    if (!pinnedEl) return;
+    var selector = cssSelectorFor(pinnedEl);
+    var overrides = getElementOverrides(selector);
+    if (!Object.keys(overrides).length) { flashButtonFeedback(btn, '⚠️'); return; }
+    var icEl = liveBtnIconNode(btn);
+    var trueIcon = icEl.textContent;
+    icEl.textContent = '⏳';
+    setLiveRequestBusy(true);
+    setBusyCursor(true);
+    var payload = buildLiveEventPayload(pinnedEl, { type: 'commit', overrides: overrides });
+    currentLiveRequestId = payload.id;
+    showToast(tr('toastLiveApplying'), 'success', LIVE_TOAST_DURATION_MS);
+    liveLastResultBox.textContent = '';
+    liveLastResultBox.style.display = 'none';
+    // Mismo polling de /progress que ya usaba Sugerir — antes solo esa vista
+    // lo tenía conectado, así que Aplicar/Aplicar todos eran una caja negra
+    // mientras Claude trabajaba (pedido explícito del usuario: ver las
+    // conclusiones/decisiones a medida que van pasando, no solo al final).
+    var stopProgressPoll = startLiveProgressPoll(payload.id, liveStatus, tr('liveCommitSendingLabel'), liveLastResultBox);
+    sendLiveEvent(payload)
+      .then(function (result) {
+        stopProgressPoll();
+        setBusyCursor(false);
+        icEl.textContent = trueIcon;
+        flashButtonFeedback(btn, (result && result.ok) ? '✅' : '❌');
+        showToast(tr(result && result.ok ? 'toastLiveApplied' : 'toastLiveApplyFailed'), result && result.ok ? 'success' : 'error', LIVE_TOAST_DURATION_MS);
+        // 'commit' individual no genera entrada de historial (a diferencia
+        // de 'suggest'/'commit-all'), así que acá no hay ningún
+        // addLiveHistoryEntry que dispare renderLastLiveResult solo — se
+        // pintan liveStatus (encabezado) y liveLastResultBox (detalle)
+        // directo acá. Regla de oro: encabezado SIEMPRE, detalle SIEMPRE
+        // (con respaldo si no hay nota) — nunca mezclados en el mismo
+        // elemento, nunca ninguno de los dos vacío.
+        if (result && result.ok) {
+          clearCommittedOverrideBookkeeping(selector);
+          markLiveHistoryEntriesApplied(selector);
+          updateOverrideIndicator();
+          flashAppliedBadgesIfEmpty();
+          liveStatus.textContent = tr('liveCommitOkLabel');
+        } else {
+          liveStatus.textContent = tr('liveErrorLabel');
+        }
+        var noteOne = (result && (result.note || (!result.ok && (result.error || result.message)))) || '';
+        liveLastResultBox.textContent = noteOne || tr(result && result.ok ? 'liveNoteFallbackOk' : 'liveNoteFallbackFail');
+        liveLastResultBox.style.display = 'block';
+        setLiveRequestBusy(false);
+      })
+      .catch(function (e) {
+        stopProgressPoll();
+        setBusyCursor(false);
+        icEl.textContent = trueIcon;
+        flashButtonFeedback(btn, '❌');
+        showToast(tr('toastLiveApplyFailed'), 'error', LIVE_TOAST_DURATION_MS);
+        liveStatus.textContent = tr('liveErrorLabel');
+        var errMsgOne = (e && e.message) || '';
+        liveLastResultBox.textContent = errMsgOne || tr('liveNoteFallbackFail');
+        liveLastResultBox.style.display = 'block';
+        setLiveRequestBusy(false);
+      });
+  }
+  // "Ir al código" — a propósito NO pasa por Claude en el caso común.
+  // Primero intenta resolver el archivo con el mapa componente/card ya
+  // cacheado (resolveComponentFileClientSide) y, a partir de ahí, la línea
+  // exacta del elemento clickeado (resolveElementLine, ver elementIndex en
+  // lens-sk-project-map.js) — si no hay correspondencia clara, cae a la
+  // línea raíz del componente/card, y si ni eso hay, abre igual el archivo
+  // solo. Si el mapa tiene una entrada Y el archivo sigue existiendo (checkFileExists, un solo fetch a este mismo servidor,
+  // no a Claude), abre vscode://file/... YA, sin ningún await de por medio
+  // desde el clic — clave para que la "activación transitoria" del
+  // navegador siga viva y el protocolo externo no quede bloqueado en
+  // silencio (bug real que rompía la versión anterior, que sí pasaba por
+  // Claude en cada clic). Recién si el mapa NO tiene ninguna entrada para
+  // ningún ancestro, o el archivo que apunta ya no existe (mapa
+  // desactualizado), se le pide ayuda a Claude — mismo flujo de siempre,
+  // `code --goto` de su lado.
+  //
+  // Límite real, no inventado: no hay forma de saber si vscode://file/...
+  // efectivamente abrió algo (el navegador no da ninguna devolución de
+  // eso) — "el link está roto" solo se puede chequear hasta el punto de
+  // "¿el archivo sigue estando ahí?", nunca "¿VSCode lo abrió de verdad?".
+  function doLiveLocate(btn) {
+    if (!pinnedEl) return;
+    var el = pinnedEl;
+    var icEl = liveBtnIconNode(btn);
+    var trueIcon = icEl.textContent;
+    function askClaude() {
+      icEl.textContent = '⏳';
+      btn.disabled = true;
+      setBusyCursor(true);
+      var payload = buildLiveEventPayload(el, { type: 'locate' });
+      sendLiveEvent(payload)
+        .then(function (result) {
+          setBusyCursor(false);
+          btn.disabled = false;
+          icEl.textContent = trueIcon;
+          flashButtonFeedback(btn, (result && result.ok && result.file) ? '✅' : '❌');
+          showToast(tr(result && result.ok && result.file ? 'toastLiveLocated' : 'toastLiveLocateFailed'), result && result.ok && result.file ? 'success' : 'error');
+        })
+        .catch(function () { setBusyCursor(false); btn.disabled = false; icEl.textContent = trueIcon; flashButtonFeedback(btn, '❌'); showToast(tr('toastLiveLocateFailed'), 'error'); });
+    }
+    var resolved = resolveComponentFileClientSide(el);
+    if (!resolved) { askClaude(); return; }
+    checkFileExists(resolved.file)
+      .then(function (exists) {
+        if (!exists) { askClaude(); return; }
+        flashButtonFeedback(btn, '✅');
+        var line = resolveElementLine(resolved, el);
+        var target = 'vscode://file/' + themeRootCache + '/' + resolved.file + (line ? ':' + line : '');
+        window.open(target, '_blank');
+        showToast(tr('toastLiveLocated'), 'success');
+      })
+      .catch(function () { askClaude(); });
   }
 
   function copyText(text) {
@@ -2856,6 +5697,7 @@
       if (!css) { flashButtonFeedback(copyCssBtn, '⚠️', copyCssLabel, 1500); return; }
       copyText(css);
       flashButtonFeedback(copyCssBtn, '✅', copyCssLabel, 1200);
+      showToast(tr('toastCssCopied'), 'success');
     });
     var resetBtn = document.createElement('button');
     resetBtn.className = 'preview-reset';
@@ -2981,6 +5823,188 @@
       }
     });
   }
+  // Lista curada de skills/comandos relevantes para ESTE proyecto (WP +
+  // Tailwind v4 + SCF + Swiper) — decisión tomada por el usuario a través
+  // del protocolo /ask-user (no un endpoint que lea ~/.claude/skills en
+  // vivo): más simple, sin backend nuevo, a costa de tener que
+  // actualizarla a mano si cambia el set de skills disponibles. El texto
+  // que arma "/" acá es solo el PROMPT que Claude va a leer del lado del
+  // chat — no ejecuta nada por sí solo, es un ayudamemoria de escritura.
+  var SLASH_COMMANDS = [
+    { cmd: 'wp-scf-component-builder', desc: 'Crear o conectar un componente con Secure Custom Fields (SCF) a partir de un diseño.' },
+    { cmd: 'wp-swiper-slider-builder', desc: 'Armar un slider/carrusel con el wrapper SwiperManager del proyecto.' },
+    { cmd: 'tw-design-system', desc: 'Adaptar un diseño al core de Tailwind CSS v4 de ELAN-SK (colores semánticos, tipografía responsive).' },
+    { cmd: 'impeccable', desc: 'Diseñar, auditar o pulir una interfaz: jerarquía, accesibilidad, espaciado, estados.' },
+    { cmd: 'frontend-design', desc: 'Dirección visual distintiva: tipografía, paleta, composición no genérica.' },
+    { cmd: 'image-to-code', desc: 'Implementar una sección a partir de una imagen de referencia del diseño.' },
+    { cmd: 'simplify', desc: 'Revisar el código cambiado por reutilización, simplificación y eficiencia.' },
+    { cmd: 'code-review', desc: 'Revisar el diff pendiente de la rama actual.' },
+    { cmd: 'security-review', desc: 'Revisión de seguridad de los cambios pendientes en la rama.' },
+    { cmd: 'dev-project-definer', desc: 'Definir un proyecto de software antes de codear: viabilidad, requerimientos, arquitectura, tracker de sprints.' },
+    { cmd: 'dev-inspector-toolbar', desc: 'Inyectar/actualizar la barra flotante Lens-SK de depuración visual.' },
+    { cmd: 'brandkit', desc: 'Generar un board de identidad de marca (logos, guías, mockups).' },
+    { cmd: 'find-skills', desc: 'Buscar o sugerir un skill instalable para una funcionalidad que falta.' },
+    { cmd: 'imagegen-frontend-mobile', desc: 'Generar conceptos de pantalla de app móvil (iOS/Android).' },
+    { cmd: 'imagegen-frontend-web', desc: 'Generar imágenes de referencia de diseño web, una por sección.' },
+  ];
+  // Menú "/" (skills/comandos) y "@" (archivos del proyecto) del textarea
+  // de Asistencia Claude (ver liveTextarea) — mismo lenguaje visual que
+  // attachAutocomplete (.ac-dropdown/.ac-item), pero pensado para un
+  // TEXTAREA de texto libre: detecta el "/" o "@" que arrancó la PALABRA
+  // bajo el cursor (no cualquier "/"/"@" suelto del texto — así una URL o
+  // un email tipeados a mano no disparan nada), filtra contra lo escrito
+  // después, e INSERTA la selección justo ahí sin tocar el resto del texto
+  // — a diferencia de attachAutocomplete, que reemplaza el valor entero o
+  // el último token separado por espacios. Un solo dropdown compartido
+  // entre los dos triggers (nunca hace falta mostrar los dos a la vez: el
+  // token bajo el cursor empieza con uno u otro, nunca los dos).
+  // "slashCommands" ya NO se recibe por parámetro (bug real de esta
+  // sesión): esta función se llama al crear liveTextarea, mucho ANTES de
+  // que SLASH_COMMANDS (var, definida más abajo en el archivo) tenga su
+  // valor asignado — el hoisting de "var" solo adelanta la declaración,
+  // no la asignación, así que el parámetro quedaba pisado en `undefined`
+  // para siempre. Se referencia SLASH_COMMANDS directo por clausura: para
+  // cuando el usuario llega a tipear algo, la asignación ya corrió.
+  function attachComposeMenus(textarea) {
+    var dropdown = document.createElement('div');
+    dropdown.className = 'ac-dropdown';
+    // A diferencia de attachAutocomplete (donde el input ya está insertado
+    // en el DOM real cuando se llama, ver startInlineEdit), acá se
+    // engancha ANTES de que liveTextarea se appendee a liveComposeBox —
+    // insertAdjacentElement('afterend', ...) sobre un elemento todavía
+    // desconectado no inserta nada en ningún lado (bug real: el dropdown
+    // quedaba huérfano, sin aparecer nunca). Se appendea directo al
+    // shadow root del panel en su lugar — no importa dónde viva en el DOM
+    // porque .ac-dropdown ya es position:fixed, position() la ubica sola
+    // contra el textarea en cada render.
+    root.appendChild(dropdown);
+    var currentMatches = []; // [{value, label, desc}]
+    var highlightedIndex = -1;
+    var triggerStart = -1; // índice del "/" o "@" que abrió el menú actual
+    var triggerChar = '';
+    function hide() { dropdown.classList.remove('show'); dropdown.innerHTML = ''; currentMatches = []; highlightedIndex = -1; triggerStart = -1; triggerChar = ''; }
+    function position() {
+      var r = textarea.getBoundingClientRect();
+      var width = Math.max(r.width, 220);
+      var left = Math.min(r.left, window.innerWidth - width - 4);
+      dropdown.style.left = Math.max(4, left) + 'px';
+      dropdown.style.top = (r.bottom + 2) + 'px';
+      dropdown.style.width = width + 'px';
+    }
+    function updateHighlight() {
+      var items = dropdown.querySelectorAll('.ac-item');
+      items.forEach(function (item, i) {
+        var active = i === highlightedIndex;
+        item.classList.toggle('ac-active', active);
+        if (active) item.scrollIntoView({ block: 'nearest' });
+      });
+    }
+    function selectMatch(m) {
+      var caret = textarea.selectionStart;
+      var before = textarea.value.slice(0, triggerStart);
+      var after = textarea.value.slice(caret);
+      var inserted = triggerChar + m.value + ' ';
+      textarea.value = before + inserted + after;
+      var newCaret = before.length + inserted.length;
+      textarea.setSelectionRange(newCaret, newCaret);
+      hide();
+      textarea.focus();
+      // Dispara los OTROS listeners de "input" ya registrados en el
+      // textarea (updateLiveSendBtnDisabled, persistLiveText) — insertar
+      // por código no los dispara solo.
+      textarea.dispatchEvent(new Event('input'));
+    }
+    // Token bajo el cursor: desde el último espacio/inicio de texto hasta
+    // el cursor. Si arranca con "/" o "@" es un trigger válido — tiene que
+    // ser el PRIMER carácter del token (no cualquier "/"/"@" en medio de
+    // una palabra, para no disparar con una URL o un email tipeados a
+    // mano), y no puede haber espacios entre el trigger y el cursor (si
+    // los hay, ya se terminó de escribir ese token).
+    function currentToken() {
+      var caret = textarea.selectionStart;
+      var value = textarea.value;
+      var i = caret - 1;
+      while (i >= 0 && !/\s/.test(value[i])) i--;
+      return { start: i + 1, text: value.slice(i + 1, caret) };
+    }
+    function renderMatches() {
+      if (!currentMatches.length) { hide(); return; }
+      dropdown.innerHTML = '';
+      highlightedIndex = -1;
+      currentMatches.forEach(function (m, i) {
+        var item = document.createElement('div');
+        item.className = 'ac-item' + (m.desc ? ' ac-item-cmd' : '');
+        if (m.desc) {
+          var label = document.createElement('div');
+          label.className = 'ac-item-cmd-label';
+          label.textContent = m.label;
+          var desc = document.createElement('div');
+          desc.className = 'ac-item-cmd-desc';
+          desc.textContent = m.desc;
+          item.appendChild(label);
+          item.appendChild(desc);
+        } else {
+          item.textContent = m.label;
+        }
+        item.addEventListener('mousedown', function (e) { e.preventDefault(); selectMatch(m); });
+        item.addEventListener('mouseenter', function () { highlightedIndex = i; updateHighlight(); });
+        dropdown.appendChild(item);
+      });
+      position();
+      dropdown.classList.add('show');
+    }
+    function render() {
+      var tok = currentToken();
+      var first = tok.text.charAt(0);
+      if (first !== '/' && first !== '@') { hide(); return; }
+      var query = tok.text.slice(1).toLowerCase();
+      if (first === '@' && !filePathsCache) {
+        // Mapa del proyecto todavía no cacheado (ver ensureComponentMap) —
+        // se pide y, cuando llegue, se vuelve a intentar render() desde
+        // cero: si el usuario ya siguió escribiendo o borró el "@", esta
+        // segunda pasada simplemente no encuentra nada que mostrar, sin
+        // necesidad de guardar estado a mano entre medio.
+        hide();
+        ensureComponentMap().then(render);
+        return;
+      }
+      var pool = first === '/'
+        ? SLASH_COMMANDS.map(function (c) { return { value: c.cmd, label: '/' + c.cmd, desc: c.desc }; })
+        : filePathsCache.map(function (p) { return { value: p, label: '@' + p, desc: '' }; });
+      currentMatches = pool.filter(function (m) { return m.value.toLowerCase().indexOf(query) !== -1; }).slice(0, 20);
+      if (!currentMatches.length) { hide(); return; }
+      triggerStart = tok.start;
+      triggerChar = first;
+      renderMatches();
+    }
+    textarea.addEventListener('input', render);
+    textarea.addEventListener('click', render); // mover el cursor con el mouse también puede cambiar qué token aplica
+    textarea.addEventListener('blur', function () { setTimeout(hide, 150); });
+    // Registrado ANTES que el listener de "Enter envía" del propio
+    // liveTextarea (ver más abajo, donde se llama attachComposeMenus) — los
+    // listeners de un mismo elemento corren en orden de registro, así que
+    // este corre primero y, con el menú abierto, usa
+    // stopImmediatePropagation para que Enter complete la sugerencia en
+    // vez de mandar el pedido con el "/algo" o "@algo" a medio escribir.
+    textarea.addEventListener('keydown', function (e) {
+      if (!currentMatches.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault(); e.stopPropagation();
+        highlightedIndex = (highlightedIndex + 1) % currentMatches.length;
+        updateHighlight();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); e.stopPropagation();
+        highlightedIndex = (highlightedIndex - 1 + currentMatches.length) % currentMatches.length;
+        updateHighlight();
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        selectMatch(currentMatches[highlightedIndex >= 0 ? highlightedIndex : 0]);
+      } else if (e.key === 'Escape') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        hide();
+      }
+    });
+  }
   function startInlineEdit(v, currentText, onCommit, inputClass, suggestions, widthContainer) {
     var input = document.createElement('input');
     input.type = 'text';
@@ -3101,9 +6125,11 @@
     input.addEventListener('click', function (e) { e.stopPropagation(); });
   }
   function makeEditableRow(label, prop, value) {
-    var overridden = !!getElementOverrides(cssSelectorFor(pinnedEl))[prop];
+    var overrideEntry = resolveOverrideEntryForProp(pinnedEl, cssSelectorFor(pinnedEl), prop);
+    var overridden = !!overrideEntry;
+    var byClaude = overridden && overrideEntry.source === 'claude';
     var row = document.createElement('div');
-    row.className = 'row-copy' + (overridden ? ' overridden' : '');
+    row.className = 'row-copy' + (overridden ? ' overridden' : '') + (byClaude ? ' overridden-claude' : '');
     row.dataset.prop = prop;
     var k = document.createElement('span');
     k.className = 'k';
@@ -3304,9 +6330,11 @@
   function makeEditableColorRow(label, prop, value) {
     var hex = rgbToHex(value);
     if (!hex) return makeEditableRow(label, prop, value);
-    var overridden = !!getElementOverrides(cssSelectorFor(pinnedEl))[prop];
+    var overrideEntry = resolveOverrideEntryForProp(pinnedEl, cssSelectorFor(pinnedEl), prop);
+    var overridden = !!overrideEntry;
+    var byClaude = overridden && overrideEntry.source === 'claude';
     var row = document.createElement('div');
-    row.className = 'row-copy' + (overridden ? ' overridden' : '');
+    row.className = 'row-copy' + (overridden ? ' overridden' : '') + (byClaude ? ' overridden-claude' : '');
     row.dataset.prop = prop;
     var k = document.createElement('span');
     k.className = 'k';
@@ -3892,6 +6920,108 @@
     })(sheet && sheet.cssRules);
     projectColorVarsCache = result;
     return result;
+  }
+
+  // Cuando un override de clase de una respuesta de Sugerir no tiene efecto
+  // real (ver classChangeHasVisibleEffect) y la clase agregada tiene forma
+  // de utility de color (prefijo-rol, ej. "text-tertiary"), resolverlo con
+  // el MISMO mecanismo que ya usa el picker manual 🎨 del panel de Estilos
+  // (getProjectColorVariables, ver makeEditableColorRow): si el proyecto ya
+  // tiene ese rol registrado como --color-{rol} en :root, aplicar
+  // directamente var(--color-{rol}) sobre la propiedad real en vez de la
+  // clase — nunca inventa un color, solo reusa lo que el propio proyecto ya
+  // tiene mapeado (funciona igual para cualquier proyecto/sistema de TW,
+  // no es específico de este). Devuelve null si no hay ninguna coincidencia
+  // (clase no-color, o rol que el proyecto no tiene definido).
+  function autoFixColorOverrideFromClass(oldClassName, newClassName) {
+    var oldSet = {};
+    (oldClassName || '').trim().split(/\s+/).forEach(function (c) { if (c) oldSet[c] = true; });
+    var added = (newClassName || '').trim().split(/\s+/).filter(function (c) { return c && !oldSet[c]; });
+    var prefixToProp = {};
+    Object.keys(TW_PROP_PREFIX).forEach(function (prop) { if (COLOR_PROPS[prop]) prefixToProp[TW_PROP_PREFIX[prop]] = prop; });
+    // Anclado a los prefijos CONOCIDOS (text/bg/border), no un split
+    // genérico de "palabra-palabra": un regex goloso tipo /^([\w-]+)-([\w-]+)$/
+    // corta en el ÚLTIMO guión, así que para un rol compuesto (primary-lt,
+    // secondary-dk...) partía mal ("text-primary" + "lt" en vez de "text" +
+    // "primary-lt") y nunca encontraba nada — bug real, encontrado recién
+    // al reusar esto desde el camino de clase (antes solo se ejercitaba
+    // con roles de una palabra, ej. tertiary).
+    var prefixPattern = Object.keys(prefixToProp).join('|');
+    var prefixRe = new RegExp('^(' + prefixPattern + ')-([\\w-]+)$');
+    var colorVars = null;
+    for (var i = 0; i < added.length; i++) {
+      var m = prefixRe.exec(added[i]);
+      if (!m) continue;
+      if (!colorVars) colorVars = getProjectColorVariables();
+      for (var k = 0; k < colorVars.length; k++) {
+        if (colorVars[k].name === m[2]) return { prop: prefixToProp[m[1]], value: 'var(' + colorVars[k].varName + ')' };
+      }
+    }
+    return null;
+  }
+  // Cascada completa de recuperación cuando un override de 'class' de una
+  // respuesta de Sugerir no tuvo efecto real (ver classChangeHasVisibleEffect):
+  // 1) ¿es un rol de color PROPIO del proyecto? (autoFixColorOverrideFromClass,
+  //    sync) — el CDN de Tailwind de más abajo NO conoce estos nombres,
+  //    son de la paleta de este proyecto, no de Tailwind estándar.
+  // 2) si no, ¿alguna de las clases agregadas es una utility de STOCK de
+  //    Tailwind que el build del proyecto simplemente no escaneó todavía?
+  //    Mismo mecanismo que ya usa la edición manual del árbol HTML
+  //    (classHasRealCss + stockClassToStyleDiff, vía el iframe aislado del
+  //    CDN) — se reusa acá en vez de duplicar lógica.
+  // Llama a onResolved({prop:value,...}) si alguna de las dos resolvió algo,
+  // o onResolved(null) si ninguna encontró nada (ahí sí, advertencia).
+  function recoverBrokenClassOverride(tagName, oldClassName, newClassName, onResolved) {
+    var colorFix = autoFixColorOverrideFromClass(oldClassName, newClassName);
+    if (colorFix) { var r = {}; r[colorFix.prop] = colorFix.value; onResolved(r); return; }
+    var oldSet = {};
+    (oldClassName || '').trim().split(/\s+/).forEach(function (c) { if (c) oldSet[c] = true; });
+    var added = (newClassName || '').trim().split(/\s+/).filter(function (c) { return c && !oldSet[c] && !classHasRealCss(c); });
+    if (!added.length) { onResolved(null); return; }
+    var combined = {};
+    var i = 0;
+    function next() {
+      if (i >= added.length) { onResolved(Object.keys(combined).length ? combined : null); return; }
+      var cls = added[i++];
+      stockClassToStyleDiff(cls, function (diff) {
+        Object.keys(diff).forEach(function (p) { combined[p] = diff[p]; });
+        next();
+      });
+    }
+    next();
+  }
+  // Aplica un mapa de overrides prop→valor sobre `el`, uno por uno EN ORDEN
+  // (no Object.keys().forEach: el override de 'class' roto puede necesitar
+  // el fallback async de recoverBrokenClassOverride/stockClassToStyleDiff,
+  // así que todo el resto tiene que esperarlo). Mismo helper para el
+  // elemento pineado y para cada childOverride — la única diferencia entre
+  // ambos casos es qué `el`/`selector`/`originalClassName` se les pasa.
+  function applyOverridesSequential(el, selector, originalClassName, propsMap, done) {
+    var keys = Object.keys(propsMap);
+    function step(idx) {
+      if (idx >= keys.length) { done(); return; }
+      var prop = keys[idx];
+      if (prop === 'class' && !classChangeHasVisibleEffect(el.tagName, originalClassName, propsMap[prop])) {
+        recoverBrokenClassOverride(el.tagName, originalClassName, propsMap[prop], function (recovered) {
+          if (recovered) {
+            Object.keys(recovered).forEach(function (p) {
+              setElementOverride(el, selector, p, recovered[p], 'claude');
+              registerCustomStyleProp(p);
+            });
+          } else {
+            showToast(tr('toastLiveClassNoEffect'), 'warn');
+            setElementOverride(el, selector, prop, propsMap[prop], 'claude');
+            registerCustomStyleProp(prop);
+          }
+          step(idx + 1);
+        });
+        return;
+      }
+      setElementOverride(el, selector, prop, propsMap[prop], 'claude');
+      registerCustomStyleProp(prop);
+      step(idx + 1);
+    }
+    step(0);
   }
 
   // ---------------------------------------------------------------------
@@ -4597,7 +7727,34 @@
   // ---------------------------------------------------------------------
   var pinnedEl = null;
   var activeTool = 'component'; // default para primer uso (sin nada en localStorage): ya queda preseleccionada
+  // Última vista REAL (no 'live') seleccionada — Asistencia Claude no es una
+  // vista con overlay propio, "hereda" el de esta (pedido explícito del
+  // usuario): si era 'layout' o 'styles', ese overlay se sigue mostrando Y
+  // siguiendo al elemento en scroll/resize mientras Asistencia está abierta,
+  // como si esa vista siguiera activa de verdad. 'component'/'contrast'/
+  // 'a11y' no tienen overlay propio, así que ahí equivale a "ninguno".
+  var lastViewTool = 'component';
   var inspectingActive = true; // default para primer uso: selector activo
+  // Con el selector activo, clickear para fijar un elemento no debería
+  // terminar arrastrando/seleccionando texto de la página real sin querer —
+  // bloquea la selección mientras dure el modo puntero. Va en un <style> del
+  // DOM real (afuera del shadow root: el shadow DOM no deja que estilos de
+  // adentro se filtren hacia la página, así que esto no puede vivir en el
+  // <style> de siempre) y solo apunta a <html>, nunca al propio toolbar.
+  var noSelectStyle = document.createElement('style');
+  noSelectStyle.textContent = 'html.lens-sk-no-select,html.lens-sk-no-select *{user-select:none!important;-webkit-user-select:none!important;}';
+  document.head.appendChild(noSelectStyle);
+  function syncNoSelectClass() {
+    document.documentElement.classList.toggle('lens-sk-no-select', inspectingActive);
+  }
+  // No-op a propósito (pedido explícito del usuario): el cursor "progress"
+  // forzado en TODA la página mientras se espera una respuesta de Claude
+  // resultaba incómodo, y el toast de "trabajando"/"terminó" ya alcanza
+  // como aviso. Se deja la función (en vez de borrar cada llamado) para no
+  // tener que tocar los 10+ call sites de Sugerir/Aplicar/Aplicar
+  // todos/Código.
+  function setBusyCursor(busy) {}
+  syncNoSelectClass();
   // 3 switches de la vista Layout (ver switches propios más abajo, junto a
   // bpInput/twcssInput): permiten apagar por separado cada capa del overlay
   // de estructura cuando el componente es muy denso y se vuelve ilegible.
@@ -4612,6 +7769,7 @@
   function toggleInspecting() {
     inspectingActive = !inspectingActive;
     pillInspectBtn.classList.toggle('active', inspectingActive);
+    syncNoSelectClass();
     if (!inspectingActive) hoverOutline.style.display = 'none';
     // Redibuja YA el panel activo (si hay uno): aplica al toque el
     // apagado/prendido de los overlays sobre la página real (pinOutline,
@@ -4634,6 +7792,12 @@
     Object.keys(buttons).forEach(function (bid) { buttons[bid].classList.toggle('active', bid === activeTool); });
     pillLayoutBtn.classList.toggle('active', activeTool === 'layout');
     pillStylesBtn.classList.toggle('active', activeTool === 'styles');
+    pillLiveBtn.classList.toggle('active', activeTool === 'live');
+    // Contraste/A11y/Ayuda general solo se ocultan en la vista de Asistencia
+    // Claude — ahí ya hay bastante contenido propio (Aplicar/Código +
+    // formulario) y esa fila no aporta nada a este flujo. En el resto de
+    // vistas (Componente/Estilos/Layout) sigue igual que siempre.
+    toolsRow.style.display = (activeTool === 'live') ? 'none' : '';
   }
 
   function selectTool(id) {
@@ -4649,8 +7813,38 @@
     saveState();
   }
 
+  // ¿el elemento tiene AL MENOS una parte visible dentro del viewport
+  // actual? Con overlap parcial ya cuenta como "visible" — no hace falta
+  // scrollear si el usuario ya lo puede ver (ej. clic directo sobre algo
+  // en pantalla), solo cuando quedó completamente afuera (arriba, abajo,
+  // o a los costados).
+  function isElementInViewport(el) {
+    var rect = el.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var vw = window.innerWidth || document.documentElement.clientWidth;
+    return rect.bottom > 0 && rect.top < vh && rect.right > 0 && rect.left < vw;
+  }
   function pin(el) {
     pinnedEl = el;
+    // Una captura editada quedó atada al elemento que estaba fijado en ese
+    // momento — si se fija OTRO elemento antes de mandarla, ya no aplica.
+    liveEditedScreenshot = null;
+    // Los adjuntos, a diferencia de la captura editada, SÍ persisten por
+    // selector (ver loadPersistedAttachments) — si este es el mismo
+    // elemento de antes (ej. después de un F5), se restauran solos; si es
+    // un elemento distinto sin nada guardado, queda vacío igual que antes.
+    liveAttachments = loadPersistedAttachments(cssSelectorFor(el));
+    renderLiveAttachments();
+    // Mismo criterio que los adjuntos: el texto que se estaba escribiendo
+    // para ESTE elemento puntual se restaura solo (ej. después de un F5).
+    liveTextarea.value = loadPersistedText(cssSelectorFor(el));
+    updateLiveSendBtnDisabled();
+    // Mismo criterio para CUALQUIER forma de fijar un elemento (clic
+    // directo, historial, padre/hijo/hermanos por teclado, restaurar
+    // estado al recargar, clon, etc. — todas pasan por acá): si quedó
+    // fuera del viewport, traerlo a la vista para no tener que buscarlo
+    // a ciegas en la página.
+    if (!isElementInViewport(el)) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     pinnedInfo.textContent = '📌 ' + labelFor(el);
     setRect(pinOutline, el.getBoundingClientRect());
     // copyClasses/copyComponent/capture ya no son "vistas" (son acciones
@@ -4661,6 +7855,7 @@
     }
     syncToolButtons();
     renderActiveTool();
+    updateLiveActionsVisibility();
     saveState();
   }
 
@@ -4673,9 +7868,34 @@
     renderActiveTool();
     panel.scrollTop = savedScroll;
   }
+  // Dibuja (o limpia) el overlay de página que le corresponde a
+  // `lastViewTool` — usada tanto al entrar a Asistencia Claude como en cada
+  // scroll/resize mientras sigue abierta (ver refreshOverlaysOnScrollResize),
+  // para que el overlay de Layout/Estilos siga al elemento en vivo, como si
+  // esa vista real siguiera activa. renderStyles/renderLayout de paso
+  // reescriben `panel` con SU contenido — a propósito, quien llama a esta
+  // función se encarga de pisar `panel` de nuevo con renderLive() después.
+  function renderUnderlyingOverlay(el) {
+    if (lastViewTool === 'styles') renderStyles(el);
+    else if (lastViewTool === 'layout') renderLayout(el);
+    else hideOverlays();
+  }
   function renderActiveTool() {
     if (!pinnedEl || !activeTool) return;
-    hideOverlays();
+    // Activar Asistencia Claude NO altera el overlay que ya estaba
+    // mostrando la vista anterior (pedido explícito del usuario): si
+    // veías la grilla/etiquetas de Layout o el margin/border/padding de
+    // Estilos, eso se sigue mostrando — y siguiendo al elemento en scroll/
+    // resize — mientras pedís un cambio, como si esa vista real siguiera
+    // activa. Claude no "limpia" la vista solo por abrirse. Layout/Estilos
+    // no cuentan como "última vista" hasta que se sale de acá: `activeTool
+    // !== 'live'` es la única condición para actualizar `lastViewTool`.
+    if (activeTool === 'live') {
+      renderUnderlyingOverlay(pinnedEl);
+    } else {
+      hideOverlays();
+      lastViewTool = activeTool;
+    }
     // Con Inspección apagada no se dibuja NINGÚN overlay sobre la página
     // real (ni el contorno del fijado ni los de spacing/layout más abajo)
     // — solo queda el panel para seguir editando, sin ensuciar la vista.
@@ -4685,6 +7905,7 @@
     if (activeTool === 'styles') return renderStyles(pinnedEl);
     if (activeTool === 'contrast') return renderContrast(pinnedEl);
     if (activeTool === 'layout') return renderLayout(pinnedEl);
+    if (activeTool === 'live') return renderLive(pinnedEl);
   }
 
   // helpHost es un segundo host de Shadow DOM aparte (para el modal de
@@ -4694,7 +7915,7 @@
   // llegue a los botones del modal (ej. el de cerrar) y quedan rotos.
   function isInsideHost(e) {
     var path = e.composedPath();
-    return path.indexOf(host) !== -1 || path.indexOf(helpHost) !== -1 || path.indexOf(treeHost) !== -1 || path.indexOf(bpHost) !== -1 || path.indexOf(modifiedMarkersRoot) !== -1 || path.indexOf(cloneMarkersRoot) !== -1 || path.indexOf(layoutOverlayRoot) !== -1;
+    return path.indexOf(host) !== -1 || path.indexOf(helpHost) !== -1 || path.indexOf(treeHost) !== -1 || path.indexOf(bpHost) !== -1 || path.indexOf(imgEditorHost) !== -1 || path.indexOf(toastRoot) !== -1 || path.indexOf(modifiedMarkersRoot) !== -1 || path.indexOf(cloneMarkersRoot) !== -1 || path.indexOf(layoutOverlayRoot) !== -1 || path.indexOf(askUserHost) !== -1;
   }
 
   function onMouseMove(e) {
@@ -4738,15 +7959,17 @@
     }, LEFT_LONG_PRESS_MS);
   }
   function onLeftPressEnd() { clearTimeout(leftPressTimer); }
-  // Doble clic con Inspección ON: copia directo las clases del elemento
-  // (mismo destino que 📋 Copiar clases en la pastilla) sin tener que abrir
-  // nada — el o los clics simples previos ya lo fijaron vía onClick/pin().
+  // Doble clic con Inspección ON: mismo destino que el ícono 📋/📍 de la
+  // pastilla (copiar clases, o Ir al código si hay Claude escuchando — ver
+  // syncRepurposedPillIcons) sin tener que abrir nada — el o los clics
+  // simples previos ya lo fijaron vía onClick/pin().
   function onDblClick(e) {
     if (isInsideHost(e)) return;
     if (!inspectingActive) return;
     e.preventDefault();
     e.stopPropagation();
-    doCopyClasses(pillCopyClassesBtn);
+    if (liveHelperAvailable) doLiveLocate(pillCopyClassesBtn);
+    else doCopyClasses(pillCopyClassesBtn);
   }
   // Clic central (rueda del mouse) con Inspección ON: fija el elemento Y
   // abre de una el popup de estructura HTML — combina selección + V en un
@@ -4816,15 +8039,53 @@
   // acción — igual patrón que M/P para Captura.
   function toggleLayoutTool() { selectTool(activeTool === 'layout' ? 'component' : 'layout'); }
   function toggleStylesTool() { selectTool(activeTool === 'styles' ? 'component' : 'styles'); }
+  function toggleLiveTool() {
+    // Ya abierta: A ya no la cierra — solo devuelve el foco al textarea
+    // (útil si el foco se fue a otro lado, ej. después de un clic en la
+    // página). Cerrar la vista se sigue pudiendo hacer cambiando a
+    // cualquier otra (S/L/V/clic en otro ícono), esto solo saca a A del
+    // rol de "toggle" que tenía antes.
+    if (activeTool === 'live') { if (pinnedEl) liveTextarea.focus(); return; }
+    selectTool('live');
+    if (pinnedEl) liveTextarea.focus();
+  }
   function doTreeShortcut() { if (!pinnedEl) { flashButtonFeedback(pillTreeBtn, '⚠️'); return; } openTreeModal(pinnedEl); }
-  function doCopyClassesShortcut() { doCopyClasses(pillCopyClassesBtn); }
-  function doCopyComponentShortcut() { doCopyComponent(pillCopyComponentBtn); }
+  function doCopyClassesShortcut() {
+    if (liveHelperAvailable) doLiveLocate(pillCopyClassesBtn);
+    else doCopyClasses(pillCopyClassesBtn);
+  }
+  function doCopyComponentShortcut() {
+    if (liveHelperAvailable) doLiveCommitAll();
+    else doCopyComponent(pillCopyComponentBtn);
+  }
+  // Aplicar SOLO el elemento fijado (manuales + de Claude), desde el botón
+  // "Aplicar" de adentro del panel de Asistencia Claude — atajo propio (E),
+  // separado del T global (pillCopyComponentBtn/doCopyComponentShortcut,
+  // ahora "Aplicar TODOS"): con las dos acciones haciendo cosas distintas,
+  // una sola letra ya no puede representar a ambas sin ambigüedad. Mismo
+  // criterio de alcance que liveHelpShortcut: solo activo con esta vista
+  // abierta, no crea ningún ícono nuevo en la pastilla.
+  function liveCommitSelectedShortcut() {
+    if (activeTool !== 'live') return;
+    doLiveCommit(liveCommitBtn);
+  }
+  // Ayuda específica de Asistencia Claude, SOLO mientras esa vista está
+  // activa (no crea ningún ícono nuevo en la pastilla — ver liveHelpBtn
+  // dentro del panel, que ya tiene su propio badge de atajo).
+  function liveHelpShortcut() {
+    if (activeTool !== 'live') return;
+    openHelp(getLiveHelpContentHTML);
+  }
   function doCaptureShortcut() { if (pinnedEl) doCapture(pinnedEl, pillCaptureBtn); else flashButtonFeedback(pillCaptureBtn, '⚠️'); }
   function doCloneShortcut() { if (pinnedEl) addCloneForPinned(); else flashButtonFeedback(pillCloneBtn, '⚠️'); }
   function resetAllStylesShortcut() {
     clearAllOverrides();
-    updateOverrideIndicator();
-    if (pinnedEl) refreshPanelKeepScroll();
+    // Recargar en vez de solo actualizar el indicador/panel: algunos
+    // overrides no volvían del todo a su estado visual original con el
+    // revert programático (el DOM real quedaba distinto de recargar la
+    // página) — recargar garantiza el estado real sin tener que perseguir
+    // cada caso puntual de revert incompleto.
+    location.reload();
   }
   // Copia el CSS real (selector + propiedades) de TODOS los overrides de la
   // página, listo para pegar en un archivo .css. No hay un botón dedicado
@@ -4838,6 +8099,7 @@
     if (!css) { flashButtonFeedback(feedbackEl, '⚠️', revertContent, 1500); return; }
     copyText(css);
     flashButtonFeedback(feedbackEl, '✅', revertContent, 1200);
+    showToast(tr('toastCssCopied'), 'success');
   }
   // Atajo de teclado: sin botón propio a la vista, el feedback ✅/⚠️ se
   // flashea sobre el label "Inspector" (mismo patrón de siempre). El botón
@@ -4858,6 +8120,12 @@
     'r': resetAllStylesShortcut, // Restablecer todos los estilos en vista previa
     'g': copyAllModifiedCssShortcut, // Copiar el CSS modificado de toda la página
     'd': doCloneShortcut, // Duplicate — "C" ya es Copiar clases, D es el mnemónico estándar de "duplicar" (Figma/Sketch/etc.)
+    'a': toggleLiveTool, // Asistencia Claude — abre/cierra el panel (modo live)
+    'e': liveCommitSelectedShortcut, // Aplicar solo el Elemento fijado — solo activo con esa vista abierta
+    '?': liveHelpShortcut, // Ayuda de Asistencia Claude — solo activo con esa vista abierta
+    'y': toggleLayoutDisplayShortcut, // Layout: switch Display — solo activo con esa vista abierta
+    'n': toggleLayoutPositionShortcut, // Layout: switch Position — solo activo con esa vista abierta
+    'o': toggleLayoutOutlineShortcut, // Layout: switch Delineado/Outline — solo activo con esa vista abierta
     // Padre/Hijo/Hermanos: solo con las flechas del teclado, sin letra ni
     // botón/popup propios.
     'arrowup': goParent,
@@ -4873,9 +8141,23 @@
     // deja pasar sin tocar (no pisa el Escape normal de la página).
     if (e.key === 'Escape') {
       if (cancelActiveStyleEdit) { e.preventDefault(); e.stopPropagation(); cancelActiveStyleEdit(); return; }
+      if (imgEditorHost.style.display === 'block') { e.preventDefault(); e.stopPropagation(); closeImageEditor(); return; }
+      if (activeActionToastDismissers.length) { e.preventDefault(); e.stopPropagation(); activeActionToastDismissers[activeActionToastDismissers.length - 1](); return; }
       if (helpHost.style.display === 'block') { e.preventDefault(); e.stopPropagation(); closeHelp(); return; }
       if (bpHost.style.display === 'block') { e.preventDefault(); e.stopPropagation(); closeBpConfig(); return; }
       if (treeHost.style.display === 'block') { e.preventDefault(); e.stopPropagation(); closeTreeModal(); return; }
+      // Los 3 desplegables flotantes de "elegir clase/variable" (color var,
+      // var picker, presets de tipografía/TWCSS — ver closeAllVariantDropdowns)
+      // no tenían Esc propio: quedaban abiertos hasta un clic afuera.
+      if (colorVarDropdownEl || varPickerDropdownEl || typographyPresetDropdownEl) {
+        e.preventDefault(); e.stopPropagation(); closeAllVariantDropdowns(); return;
+      }
+      // Textarea de "Asistencia Claude" (Pedir cambio): Esc le saca el foco
+      // para volver a poder usar los atajos de una letra (que se ignoran
+      // mientras el foco está en un campo editable, ver isEditableTarget más
+      // abajo) — pedido explícito del usuario, mismo criterio que el resto
+      // de esta cadena de Esc.
+      if (trueActiveElement() === liveTextarea) { e.preventDefault(); e.stopPropagation(); liveTextarea.blur(); return; }
       return;
     }
     if (isEditableTarget(trueEventTarget(e)) || isEditableTarget(trueActiveElement())) return;
@@ -4947,6 +8229,16 @@
     var savedScroll = panel.scrollTop;
     if (activeTool === 'styles') renderStyles(pinnedEl);
     else if (activeTool === 'layout') renderLayout(pinnedEl);
+    else if (activeTool === 'live') {
+      // El overlay "heredado" (ver renderUnderlyingOverlay) también tiene
+      // que seguir al elemento acá — si no, se congela apenas se scrollea
+      // con Asistencia Claude abierta (bug real de esta sesión). Si
+      // lastViewTool era layout/styles, esas dos llamadas reescriben
+      // `panel` con su propio contenido — renderLive() de acá abajo lo
+      // pisa de vuelta con la UI real de Asistencia.
+      renderUnderlyingOverlay(pinnedEl);
+      renderLive(pinnedEl);
+    }
     panel.scrollTop = savedScroll;
   }
   window.addEventListener('resize', refreshOverlaysOnScrollResize);
@@ -4986,6 +8278,26 @@
       hint.textContent = tr('noReactSourcePrefix') + (rootClass || tr('noClassLabel')) + tr('noReactSourceSuffix');
       panel.appendChild(hint);
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // Herramienta: Asistencia Claude (modo live, ver lens-sk-live-server.js).
+  // Mismo patrón que renderLayout/renderStyles: los elementos (fila de
+  // botones, formulario de pedido, ayuda propia) son persistentes — se
+  // crean una sola vez más arriba y acá solo se appendean. El formulario
+  // queda siempre visible (no hace falta un botón "Sugerir" para revelarlo)
+  // — el target ya se ve arriba de todo en pinnedInfo (📌), no hace falta
+  // repetirlo acá.
+  // ---------------------------------------------------------------------
+  function renderLive(el) {
+    clearPanel();
+    panel.appendChild(makeHeader(tr('liveGroupHeader')));
+    panel.appendChild(liveActionsRow);
+    var hasOverrides = Object.keys(getElementOverrides(cssSelectorFor(el))).length > 0;
+    liveCommitBtn.disabled = !hasOverrides;
+    panel.appendChild(liveComposeBox);
+    renderLiveHistory();
+    panel.appendChild(liveHistorySection);
   }
 
   // ---------------------------------------------------------------------
@@ -5081,7 +8393,7 @@
       // propio reset de fondo/borde, .ic solo no hace nada ahí).
       presetBtn.className = 'typo-preset-btn';
       presetBtn.title = tr('typographyPreset');
-      presetBtn.textContent = '✨';
+      presetBtn.textContent = '🪄';
       presetBtn.addEventListener('click', function (e) { e.stopPropagation(); openTypographyPresetDropdown(presetBtn); });
       typoHeader.appendChild(presetBtn);
     }
@@ -6021,6 +9333,7 @@
       || el.closest('section,article,header,footer,aside,main')
       || el.parentElement || el;
     var scale = Math.min(window.devicePixelRatio || 1, 2);
+    var outCanvasRef = null;
 
     window.modernScreenshot
       .domToCanvas(ancestor, { scale: scale })
@@ -6043,18 +9356,44 @@
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold ' + (11 * scale) + 'px ui-sans-serif, system-ui, sans-serif';
         ctx.textBaseline = 'middle';
-        ctx.fillText('📍 ' + label, 6 * scale, stripH / 2, sw - 12 * scale);
+        // Ancho + breakpoint activo en la misma tira — pedido explícito: una
+        // captura pegada en el chat (no la de "Adjuntar" de Sugerir, que ya
+        // manda este dato aparte en el JSON) también tiene que llevarlo
+        // encima, útil tanto para mí como para quien la reciba.
+        var bp = currentBreakpointInfo();
+        ctx.fillText('📍 ' + label + '   ·   📱 ' + bp.width + 'px · ' + bp.breakpoint, 6 * scale, stripH / 2, sw - 12 * scale);
         ctx.strokeStyle = '#ec4899';
         ctx.lineWidth = 3 * scale;
         ctx.strokeRect(1.5 * scale, stripH + 1.5 * scale, sw - 3 * scale, sh - 3 * scale);
 
+        outCanvasRef = out;
         return new Promise(function (resolve, reject) {
           out.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error('toBlob devolvió null')); }, 'image/png');
         });
       })
       .then(function (blob) { return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); })
-      .then(function () { flashButtonFeedback(btn, '✅', original); })
-      .catch(function () { flashButtonFeedback(btn, '❌', original, 2000); })
+      .then(function () {
+        flashButtonFeedback(btn, '✅', original);
+        // Toast con Editar/Descargar (en vez del toast de solo texto) — el
+        // usuario pidió más tiempo para leer y decidir (showActionToast dura
+        // 8s en vez de los 2.2s normales) y poder abrir el mismo editor de
+        // imagen que usa Asistencia Claude, o bajarla tal cual sin editar.
+        var dataUrl = outCanvasRef ? outCanvasRef.toDataURL('image/png') : null;
+        if (!dataUrl) { showToast(tr('toastCaptureCopied'), 'success'); return; }
+        showActionToast(tr('toastCaptureCopied'), [
+          {
+            label: tr('imgEditorEditBtn'),
+            onClick: function () {
+              openImageEditor(dataUrl, {
+                confirmLabelKey: 'imgEditorConfirmCopy',
+                onConfirm: function (edited) { copyImageDataUrlToClipboard(edited); },
+              });
+            },
+          },
+          { label: tr('imgEditorDownloadBtn'), onClick: function () { downloadDataUrl(dataUrl, 'captura-' + Date.now() + '.png'); } },
+        ]);
+      })
+      .catch(function () { flashButtonFeedback(btn, '❌', original, 2000); showToast(tr('toastCaptureFailed'), 'error'); })
       .finally(function () { delete btn.dataset.capturing; });
   }
 
@@ -6476,6 +9815,7 @@
         inspectingActive = false;
         pillInspectBtn.classList.remove('active');
         hoverOutline.style.display = 'none';
+        syncNoSelectClass();
       }
       if (state.propertyFilter) propertyFilterQuery = state.propertyFilter;
       if (Array.isArray(state.customStyleProps)) customStyleProps = state.customStyleProps;
@@ -6531,7 +9871,9 @@
       window.removeEventListener('resize', refreshOverlaysOnScrollResize);
       window.removeEventListener('scroll', refreshOverlaysOnScrollResize, true);
       window.removeEventListener('resize', updateBadge);
-      [host, bpHost, hoverOutline, pinOutline, marginOverlay, borderOverlay, paddingOverlay, contentOverlay, layoutOverlayRoot, badge, modifiedMarkersRoot, cloneMarkersRoot, twFrame].forEach(function (n) { n && n.remove(); });
+      [host, bpHost, imgEditorHost, hoverOutline, pinOutline, marginOverlay, borderOverlay, paddingOverlay, contentOverlay, layoutOverlayRoot, badge, modifiedMarkersRoot, cloneMarkersRoot, twFrame, noSelectStyle, toastRoot].forEach(function (n) { n && n.remove(); });
+      document.documentElement.classList.remove('lens-sk-no-select');
+      document.documentElement.classList.remove('lens-sk-busy');
       window.__claudeInspector = null;
     },
   };
@@ -6550,4 +9892,12 @@
   syncBarSpacing();
   updateHotkeyHintsVisibility();
   enforceMobileHidden();
+  checkLiveHelper();
+  setInterval(checkLiveHelper, 15000);
+  // Cadencia propia (más rápida que checkLiveHelper) porque una pregunta
+  // de Claude es algo que espera acción del usuario AHORA, no un heartbeat
+  // de conexión que puede tardar 15s en notarse.
+  pollAskUser();
+  setInterval(pollAskUser, 2500);
+  ensureComponentMap(); // precachear ya — para cuando se clickee "Ir al código" tiene que estar resuelto (ver doLiveLocate)
 })();
